@@ -11,7 +11,7 @@
 
 @interface VDSCMarketIndexView()
 {
-    NSMutableArray *array_index;
+    NSMutableDictionary *array_index;
     NSMutableData *webData_index;
     NSURLConnection *connection_index;
     NSTimer *timer_index;
@@ -54,7 +54,7 @@
     [self loadMarketIndex];
     utils = [[VDSCCommonUtils alloc] init];
     [super awakeFromNib];
-    array_index = [[NSMutableArray alloc] init];
+    array_index = [[NSMutableDictionary alloc] init];
     
     
     timer_index= [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(loadData) userInfo:nil repeats:YES];
@@ -127,15 +127,15 @@
     
     if(webData_index == nil)return;
     
-    [array_index removeAllObjects];
+    //[array_index r];
     
-    NSDictionary *allDataDictionary = [NSJSONSerialization JSONObjectWithData:webData_index options:0 error:nil];
+    NSDictionary *allDataDictionary = [[NSJSONSerialization JSONObjectWithData:webData_index options:0 error:nil] retain];
     //NSDictionary *list = [allDataDictionary objectForKey:@"list"];
     NSArray *arrayOfEntity = [allDataDictionary objectForKey:@"hsx"];
     
-    VDSCIndexEntity *index = [[VDSCIndexEntity alloc]init];
+    VDSCIndexEntity *index = nil;
     if(![arrayOfEntity isEqual:[NSNull null]]){
-        
+        index = [[VDSCIndexEntity alloc]init];
         index.marketName=@"VN-INDEX";
         index.mark = [arrayOfEntity objectAtIndex:0];
         index.change = [arrayOfEntity objectAtIndex:1];
@@ -145,9 +145,16 @@
         index.value = [arrayOfEntity objectAtIndex:3];
         index.amount = [arrayOfEntity objectAtIndex:4];
         index.color= [arrayOfEntity objectAtIndex:11];
-        [array_index addObject:index];
+        [array_index setValue:index forKey:@"hsx"];
         [index release];
     }
+    else
+    {
+        VDSCIndexEntity *entity=[[VDSCIndexEntity alloc]initWithDefault: @"HSX-INDEX"] ;
+        [array_index setValue:entity forKey:@"vn30"];
+        [entity release];
+    }
+    
     
     arrayOfEntity = [allDataDictionary objectForKey:@"vn30"];
     if(![arrayOfEntity isEqual:[NSNull null]]){
@@ -162,8 +169,14 @@
         index.value = [arrayOfEntity objectAtIndex:3];
         index.amount = [arrayOfEntity objectAtIndex:4];
         index.color= [arrayOfEntity objectAtIndex:11];
-        [array_index addObject:index];
+        [array_index setValue:index forKey:@"vn30"];
         [index release];
+    }
+    else
+    {
+        VDSCIndexEntity *entity=[[VDSCIndexEntity alloc]initWithDefault: @"HSX-INDEX"] ;
+        [array_index setValue:entity forKey:@"vn30"];
+        [entity release];
     }
     
     arrayOfEntity = [allDataDictionary objectForKey:@"hnx"];
@@ -178,8 +191,14 @@
         index.value = [arrayOfEntity objectAtIndex:3];
         index.amount = [arrayOfEntity objectAtIndex:4];
         index.color= [arrayOfEntity objectAtIndex:11];
-        [array_index addObject:index];
+        [array_index setValue:index forKey:@"hnx"];
         [index release];
+    }
+    else
+    {
+        VDSCIndexEntity *entity=[[VDSCIndexEntity alloc]initWithDefault: @"HSX-INDEX"] ;
+        [array_index setValue:entity forKey:@"vn30"];
+        [entity release];
     }
     
     
@@ -195,10 +214,16 @@
         index.value = [arrayOfEntity objectAtIndex:3];
         index.amount = [arrayOfEntity objectAtIndex:4];
         index.color= [arrayOfEntity objectAtIndex:11];
-        [array_index addObject:index];
+        [array_index setValue:index forKey:@"hnx30"];
         [index release];
     }
     
+    else
+    {
+        VDSCIndexEntity *entity=[[VDSCIndexEntity alloc]initWithDefault: @"HSX-INDEX"] ;
+        [array_index setValue:entity forKey:@"vn30"];
+        [entity release];
+    }
     
     arrayOfEntity = [allDataDictionary objectForKey:@"upcom"];
     if(![arrayOfEntity isEqual:[NSNull null]]){
@@ -212,11 +237,17 @@
         index.value = [arrayOfEntity objectAtIndex:3];
         index.amount = [arrayOfEntity objectAtIndex:4];
         index.color= [arrayOfEntity objectAtIndex:11];
-        [array_index addObject:index];
+        [array_index setValue:index forKey:@"upcom"];
         [index release];
     }
+    else
+    {
+        VDSCIndexEntity *entity=[[VDSCIndexEntity alloc]initWithDefault: @"HSX-INDEX"] ;
+        [array_index setValue:entity forKey:@"vn30"];
+        [entity release];
+    }
     
-    
+    [allDataDictionary release];
     [self reloadData];
     
 }
@@ -242,12 +273,14 @@
     //if(start) [self loadMarqueeData];
     
     if(ho_index ==nil)[self loadMarketIndex];
+    if(array_index!=nil){// && array_index.count==5){
     //NSLog(((VDSCIndexEntity *)[array objectAtIndex:0]).amount);
-    [ho_index initValue:[array_index objectAtIndex:0]];
-    [ho30_index initValue:[array_index objectAtIndex:1]];
-    [ha_index initValue:[array_index objectAtIndex:2]];
-    [ha30_index initValue:[array_index objectAtIndex:3]];
-    [upcom_index initValue:[array_index objectAtIndex:4]];
+    [ho_index initValue:[array_index valueForKey:@"hsx"]];
+    [ho30_index initValue:[array_index valueForKey:@"vn30"]];
+    [ha_index initValue:[array_index valueForKey:@"hnx"]];
+    [ha30_index initValue:[array_index valueForKey:@"hnx30"]];
+    [upcom_index initValue:[array_index valueForKey:@"upcom"]];
+    }
 }
 -(void)loadMarqueeData
 {
@@ -282,8 +315,8 @@
             NSString *mark=[NSString stringWithFormat:@"%@",[[self.delegate utils].numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             d = [index.change doubleValue];
             NSString *change=[NSString stringWithFormat:@"%@",[[self.delegate utils].numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
-            d = [index.changePer doubleValue];
-            NSString *changePer=[NSString stringWithFormat:@"%@",[[self.delegate utils].numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+            //d = [index.changePer doubleValue];
+            //NSString *changePer=[NSString stringWithFormat:@"%@",[[self.delegate utils].numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             content =[NSString stringWithFormat:@"%@%@", content,[NSString stringWithFormat:@"<label style=\"color: %@\">%@ %@ %@(%@) - KLGD:%@ - GTGD:%@ </label> ", color,index.marketName, mark, change, index.changePer, value, amount]];
         }
     }

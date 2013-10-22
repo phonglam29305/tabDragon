@@ -12,5 +12,6 @@
 
 @property (strong, nonatomic)NSString* orderType;
 -(void) initSource: (NSArray*) source;
+-(void) initSourceOrderType: (NSMutableArray*) source;
 -(NSString*) getOrderType;
 @end

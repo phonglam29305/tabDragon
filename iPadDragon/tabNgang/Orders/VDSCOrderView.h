@@ -9,8 +9,6 @@
 #import <UIKit/UIKit.h>
 #import "HMSegmentedControl.h"
 #import "OCCalendarViewController.h"
-#import "CPPickerView.h"
-#import "TVPickerView.h"
 #import "UIKeyboardCoView.h"
 #import "VDSCOrderTypeView.h"
 #import "VDSCOTPView.h"
@@ -21,16 +19,12 @@
 @property (retain, nonatomic) IBOutlet UIButton *f_tuNgay;
 @property (retain, nonatomic) IBOutlet UIView *f_searchBar;
 @property (retain, nonatomic) IBOutlet UIButton *btn_tuNgay;
-- (IBAction)btn_tuNgay_Touch:(id)sender;
 @property (retain, nonatomic) IBOutlet UITextField *txt_tuNgay;
-- (IBAction)btn_denNgay:(id)sender;
 @property (retain, nonatomic) IBOutlet UITextField *txt_denNgay;
 @property (retain, nonatomic) IBOutlet UIButton *btn_hieuLuc;
-- (IBAction)btn_hieuLuc_touch:(id)sender;
 @property (retain, nonatomic) IBOutlet UITextField *txt_hieuLuc;
 @property (retain, nonatomic) IBOutlet VDSCOrderTypeView *f_loaiLenh;
 @property (retain, nonatomic) IBOutlet UIScrollView *scroll_keycorrect;
-- (IBAction)txt_ma_ValueChanged:(id)sender;
 @property (retain, nonatomic) IBOutlet UITextField *txt_ma;
 @property (retain, nonatomic) IBOutlet UITextField *txt_khoiLuong;
 @property (retain, nonatomic) IBOutlet UITextField *txt_gia;
@@ -78,11 +72,12 @@
 @property (retain, nonatomic) id delegate;
 @property (retain, nonatomic) IBOutlet UILabel *f_tiLeVay;
 - (IBAction)btn_OrderConfirm:(id)sender;
-//@property (retain, nonatomic) IBOutlet UISegmentedControl *seg_orderSide;
+- (IBAction)txt_ma_ValueChanged:(id)sender;
+- (IBAction)btn_hieuLuc_touch:(id)sender;
 @property (retain, nonatomic) IBOutlet UILabel *f_sucMua;
 @property (retain, nonatomic) IBOutlet UILabel *f_soDuCK;
 @property (retain, nonatomic) IBOutlet UILabel *f_tongTien;
-@property (strong, nonatomic) NSString *stockId;
+@property (retain, nonatomic) NSString *stockId;
 -(void) loadStockInfo;
 @property (retain, nonatomic) IBOutlet VDSCOTPView *otpView;
 @property (retain, nonatomic) IBOutlet VDSCOTPView *otp;
@@ -96,5 +91,6 @@
 -(void)loadOrders;
 -(void)clearInputData;
 
+@property (retain, nonatomic) NSTimer *timer_order;
 
 @end

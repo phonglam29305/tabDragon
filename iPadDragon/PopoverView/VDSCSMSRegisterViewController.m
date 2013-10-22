@@ -44,6 +44,7 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    @try{
 	// Do any additional setup after loading the view.
     utils = [[VDSCCommonUtils alloc] init];
     [self registerForKeyboardNotifications];
@@ -122,8 +123,12 @@
     self.f_soTK.text = utils.clientInfo.clientID;
     self.txt_sdt.text=utils.clientInfo.phone;
     
-    loading = [utils showLoading:self.view];
-    [self performSelectorInBackground:@selector(loadData) withObject:nil];
+    //loading = [utils showLoading:self.view];
+        [self performSelectorInBackground:@selector(loadData) withObject:nil];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 -(void)loadData
@@ -136,16 +141,17 @@
         
         NSString *url = [[NSUserDefaults standardUserDefaults] stringForKey:@"SMSInfo"];
         allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
-        if([[allDataDictionary objectForKey:@"success"] boolValue])
+        if(![allDataDictionary isEqual:[NSNull null]] && [[allDataDictionary objectForKey:@"success"] boolValue])
         {
             
             hasPendingTrade = [[allDataDictionary objectForKey:@"isPending"] intValue]==1;
             if(hasPendingTrade)
                 [utils showMessage:@"Yêu cầu của quý khách đang được thực hiện, Quý khách vui lòng quay lại sau." messageContent:nil];
             self.btn_confirm.enabled= self.txt_sdt.enabled = cbv_tien.enabled = cbv_soDu.enabled = cbv_margin.enabled = cbv_khopLenh.enabled=cbv_chungKhoan.enabled=cbv_dichVu.enabled=!hasPendingTrade;
-            NSArray *data = [[allDataDictionary objectForKey:@"services"] objectAtIndex:0];
+            NSArray *data = [allDataDictionary objectForKey:@"services"];
             
             if(![data isEqual:[NSNull null]]){
+                data = [data objectAtIndex:0];
                 self.txt_sdt.text= [NSString stringWithFormat:@"%@",[data objectAtIndex:9]];
                 oldNumber = [[NSString stringWithFormat:@"%@",[data objectAtIndex:9]] retain];
                 cbv_chungKhoan.checked = [[data objectAtIndex:4] intValue]==1;
@@ -167,7 +173,7 @@
         }
     }
     @catch (NSException *exception) {
-        NSLog(exception.description);
+        NSLog(@"Error: %@",exception.description);
     }
     @finally {
         
@@ -232,7 +238,7 @@
     [super viewDidUnload];
 }
 - (IBAction)seg_hinhThuc:(id)sender {
-    
+    @try{
     if(!isRegisted && (self.f_loaiDK.selectedSegmentIndex!=0))
     {
         self.f_loaiDK.selectedSegmentIndex=0;
@@ -241,7 +247,7 @@
     else if(isRegisted && (self.f_loaiDK.selectedSegmentIndex==0))
     {
         self.f_loaiDK.selectedSegmentIndex=1;
-        [utils showMessage:[utils.dic_language objectForKey:@"ipad.SMS.registed"] messageContent:nil];
+        [utils showMessage:[utils.dic_language objectForKey:@"ipad.SMS.registed"] messageContent:nil dismissAfter:3];
     }
     else{
         if(self.f_loaiDK.selectedSegmentIndex==2 || hasPendingTrade)
@@ -249,6 +255,10 @@
             self.txt_sdt.enabled = cbv_tien.enabled = cbv_soDu.enabled = cbv_margin.enabled = cbv_khopLenh.enabled=cbv_chungKhoan.enabled=cbv_dichVu.enabled=NO;
         }
         else self.txt_sdt.enabled = cbv_tien.enabled = cbv_soDu.enabled = cbv_margin.enabled = cbv_khopLenh.enabled=cbv_chungKhoan.enabled=cbv_dichVu.enabled=YES;
+    }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 - (IBAction)btn_confirm_touch:(id)sender {
@@ -348,6 +358,7 @@
 }
 -(BOOL)checkInput
 {
+    @try{
     NSString *message=@"";
     if(isRegisted && self.f_loaiDK.selectedSegmentIndex==0)
         message = @"Quý khách đã đăng ký dịch vụ";
@@ -394,7 +405,12 @@
         [utils showMessage:message messageContent:nil];
     }
     
-    return message.length==0;
+        return message.length==0;
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+        return NO;
+    }
 }
 - (IBAction)btn_cancel_touch:(id)sender {
     [((VDSCAccountInfoView*)self.delegate).popover_sms dismissPopoverAnimated:YES];

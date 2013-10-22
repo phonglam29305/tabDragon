@@ -38,8 +38,7 @@
 {
     self = [super initWithStyle:style reuseIdentifier:@"VDSCOrderConfirmServicesCell"];
     if (self) {
-        NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCOrderConfirmServicesCell" owner:self options:nil];
-        self = [nibArray objectAtIndex:0];
+        
     }
     return self;
 }

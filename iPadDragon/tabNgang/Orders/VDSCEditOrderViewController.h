@@ -21,15 +21,16 @@
 @property (retain, nonatomic) IBOutlet UILabel *f_loaiLenh;
 @property (retain, nonatomic) IBOutlet UILabel *f_title;
 @property (retain, nonatomic) IBOutlet UITextField *txt_newPrice;
+@property (retain, nonatomic) IBOutlet UITextField *txt_newQTY;
 @property (strong, nonatomic) VDSCOrderEntity *orderEntity;
 @property (retain, nonatomic) IBOutlet UIView *otpView_cancelEdit;
 @property (retain, nonatomic) IBOutlet UIView *otpView_createOrder;
-@property (assign, nonatomic) NSString *orderSide;
-@property (strong, nonatomic) VDSCSystemParams *params;
+@property (copy, nonatomic) NSString *orderSide;
+@property (retain, nonatomic) VDSCSystemParams *params;
 @property (retain, nonatomic) IBOutlet UIView *view_orderList;
 @property (retain, nonatomic) IBOutlet UIView *view_createOrder;
 @property (retain, nonatomic) IBOutlet UIView *view_cancelEdit;
-@property (strong, nonatomic) id delegate;
+@property (retain, nonatomic) id delegate;
 @property (retain, nonatomic) IBOutlet UITableView *table_todayOderList;
 @property (retain, nonatomic) IBOutlet UILabel *lbl_cancelEdit;
 
@@ -46,7 +47,7 @@
 @property (retain, nonatomic) IBOutlet UITextField *txt_hieuLuc;
 @property (retain, nonatomic) IBOutlet VDSCOrderTypeView *f_loaiLenh_createOrder;
 //@property (retain, nonatomic) IBOutlet UIKeyboardCoView *scroll_keycorrect;
-@property (strong, nonatomic) NSMutableArray *arrayGtdDate;
+@property (retain, nonatomic) NSMutableArray *arrayGtdDate;
 
 - (IBAction)btn_confirm_touch:(id)sender;
 - (IBAction)btn_cancel_touch:(id)sender;

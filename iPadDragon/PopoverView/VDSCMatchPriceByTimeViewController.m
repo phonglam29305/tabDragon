@@ -45,56 +45,79 @@
 }
 -(UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    NSString *cellIndentifier = @"VDSCFullCellPrice";
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-    
     NSInteger i=indexPath.row;
     NSArray *dic = [self.dataSource objectAtIndex:i];
-    
-    //if([nsclass class]){return cell;}
-    int x=0;
-    UILabel *label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 121, 24);
-    label.text = [dic objectAtIndex:0];
-    label.backgroundColor = [UIColor clearColor];
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textAlignment = UITextAlignmentCenter;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 121, 24);
-    double d=[[dic objectAtIndex:1] doubleValue];
-    label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
-    label.backgroundColor = [UIColor clearColor];
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textAlignment = UITextAlignmentRight;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 121, 24);
-    d=[[dic objectAtIndex:2] doubleValue];
-    label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
-    label.backgroundColor = [UIColor clearColor];
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textAlignment = UITextAlignmentRight;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 120, 24);
-    d=[[dic objectAtIndex:3] doubleValue];
-    label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
-    label.backgroundColor = [UIColor clearColor];
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textAlignment = UITextAlignmentRight;
-    [cell addSubview:label];
-    [label release];
-    //}
+    NSString *cellIndentifier = @"VDSCFullCellPrice";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIndentifier];
+    if(cell==nil){
+        cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
+        [cell autorelease];
+        
+        //if([nsclass class]){return cell;}
+        int x=0;
+        UILabel *label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 121, 24);
+        label.text = [dic objectAtIndex:0];
+        label.backgroundColor = [UIColor clearColor];
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textAlignment = UITextAlignmentCenter;
+        label.tag=10;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 121, 24);
+        double d=[[dic objectAtIndex:1] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+        label.backgroundColor = [UIColor clearColor];
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textAlignment = UITextAlignmentRight;
+        label.tag=11;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 121, 24);
+        d=[[dic objectAtIndex:2] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+        label.backgroundColor = [UIColor clearColor];
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textAlignment = UITextAlignmentRight;
+        label.tag=12;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 120, 24);
+        d=[[dic objectAtIndex:3] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+        label.backgroundColor = [UIColor clearColor];
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textAlignment = UITextAlignmentRight;
+        label.tag=13;
+        [cell addSubview:label];
+        [label release];
+    }
+    else{
+        UILabel *label = (UILabel*)[cell viewWithTag:10];
+        label.text = [dic objectAtIndex:0];
+        
+        label=(UILabel*)[cell viewWithTag:11];
+        double d=[[dic objectAtIndex:1] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+        
+        
+        label=(UILabel*)[cell viewWithTag:12];
+        d=[[dic objectAtIndex:2] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+        
+        label=(UILabel*)[cell viewWithTag:13];
+        d=[[dic objectAtIndex:3] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+    }
     return  cell;
     
 }

@@ -7,8 +7,8 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "VDSCLoginView.h"
 #import "VDSCCommonUtils.h"
+#import "CustomControls/TPKeyboardAvoiding/TPKeyboardAvoidingScrollView.h"
 
 @interface VDSCViewController : UIViewController<UITextFieldDelegate>
 
@@ -42,6 +42,8 @@
 @property (retain, nonatomic) IBOutlet UILabel *lbl_thitruong;
 @property (retain, nonatomic) IBOutlet UILabel *lbl_lenh;
 @property (retain, nonatomic) IBOutlet UILabel *lbl_dichvu;
+- (IBAction)btn_dieuKhoan_touch:(id)sender;
+- (IBAction)btn_hoTro_touch:(id)sender;
 
 - (IBAction)btn_huongDan_touch:(id)sender;
 @end

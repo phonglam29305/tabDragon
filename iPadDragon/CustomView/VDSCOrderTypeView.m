@@ -53,6 +53,42 @@
     }
     
 }
+-(void) initSourceOrderType: (NSMutableArray*) source
+{
+    if(source.count==0)return;
+    
+    self.orderType = [source objectAtIndex:0];
+    arr = source;
+    self.contentSize = CGSizeMake(self.frame.size.width*source.count, self.frame.size.height);
+    int i=100;
+    [self removeSubviewsOfView];
+    for(NSArray *item in source)
+    {
+        CGRect rect = self.frame;
+        int index = [source indexOfObject:item];
+        rect.origin.x = rect.origin.x + rect.size.width*index;
+        
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(self.frame.size.width*index, 0, self.frame.size.width, 26)];
+        label.tag = i;
+        label.text=[item objectAtIndex:1];
+        [label setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"cbb-loailenh.png"]]];
+        label.textColor = [UIColor darkGrayColor];
+        label.textAlignment = UITextAlignmentCenter;
+        //[view addSubview:label];
+        [self addSubview:label];
+        [label release];
+        i+=100;
+    }
+    
+}
+- (void)removeSubviewsOfView
+{
+    NSArray *subViews = [self subviews];
+    for(UIView *view in subViews)
+    {
+        [view removeFromSuperview];
+    }
+}
 -(void)scrollViewDidScroll:(UIScrollView *)scrollView
 {
     CGFloat pageWidth = 150;

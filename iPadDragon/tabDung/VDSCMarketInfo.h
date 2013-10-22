@@ -40,6 +40,7 @@
 
 - (IBAction)showMiniPriceBoard:(id)sender;
 - (IBAction)btn_add_touch:(id)sender;
+- (IBAction)btn_reloadPriceBoard:(id)sender;
 
 //-(void) loadMarketIndex;
 -(void) dismissPopoverController:(UIPopoverController *)popover;

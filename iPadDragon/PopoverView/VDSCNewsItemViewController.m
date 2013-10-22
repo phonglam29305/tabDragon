@@ -48,7 +48,13 @@
     
     self.f_title.text = newsEntity.f_title;
     self.f_date.text = newsEntity.f_date;
-    [self.f_webContent loadHTMLString:newsEntity.f_content baseURL:nil];
+    if(newsEntity.isWebLink)
+    {
+        NSURLRequest *request=[[[NSURLRequest alloc] initWithURL:[NSURL URLWithString:newsEntity.f_content]] autorelease];
+       [self.f_webContent loadRequest:request];
+    }
+    else
+        [self.f_webContent loadHTMLString:newsEntity.f_content baseURL:nil];
 }
 
 - (void)didReceiveMemoryWarning

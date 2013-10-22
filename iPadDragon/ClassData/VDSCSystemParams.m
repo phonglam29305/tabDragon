@@ -10,16 +10,25 @@
 #import "VDSCCommonUtils.h"
 
 @implementation VDSCSystemParams
+@synthesize orderStatusList;
+@synthesize hsxOrderType;
+@synthesize hnxOrderType;
+@synthesize upcomOrderType;
+@synthesize hoseStepPrice;
+@synthesize hnxStepPrice;
+@synthesize  upcomStepPrice;
 
--(VDSCSystemParams*) init
+-(id) init
 {
-    self.orderStatusList = [[NSMutableArray alloc] init];
-    self.hsxOrderType = [[NSMutableArray alloc] init];
-    self.hnxOrderType = [[NSMutableArray alloc] init];
-    self.upcomOrderType = [[NSMutableArray alloc] init];
-    self.hoseStepPrice = [[NSMutableArray alloc] init];
-    self.hnxStepPrice = [[NSMutableArray alloc] init];
-    self.upcomStepPrice = [[NSMutableArray alloc] init];
+    self = [super init];
+    
+    orderStatusList = [[NSMutableArray alloc] init];
+    hsxOrderType = [[NSMutableArray alloc] init];
+    hnxOrderType = [[NSMutableArray alloc] init];
+    upcomOrderType = [[NSMutableArray alloc] init];
+    hoseStepPrice = [[NSMutableArray alloc] init];
+    hnxStepPrice = [[NSMutableArray alloc] init];
+    upcomStepPrice = [[NSMutableArray alloc] init];
     
     VDSCCommonUtils *utils = [[VDSCCommonUtils alloc] init];
     //VDSCSystemParams *params = [VDSCSystemParams alloc];
@@ -29,7 +38,11 @@
     
     NSString *url = [[NSUserDefaults standardUserDefaults] stringForKey:@"systemParams"];
     NSDictionary *allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
+    if([allDataDictionary isEqual:[NSNull null]])return self;
     //NSArray *data = [[allDataDictionary objectForKey:@"list"] copy];
+    //for (id key in allDataDictionary) {
+    //    NSLog(@"key: %@, value: %@ \n", key, [allDataDictionary objectForKey:key]);
+    //}
     for(NSArray *obj in [allDataDictionary objectForKey:@"orderStatusList"] )
     {
         [self.orderStatusList addObject:obj];
@@ -46,9 +59,7 @@
     {
         [self.upcomOrderType addObject:obj];
     }
-    //[self.hoseStepPrice addObject:[allDataDictionary objectForKey:@"hoseStepPrice"]];
-    //[self.hnxStepPrice addObject:[allDataDictionary objectForKey:@"hnxStepPrice"]];
-    //[self.upcomStepPrice addObject:[allDataDictionary objectForKey:@"upcomStepPrice"]];
+    
     for(NSArray *obj in [allDataDictionary objectForKey:@"hoseStepPrice"] )
     {
         [self.hoseStepPrice addObject:obj];
@@ -64,6 +75,17 @@
     self.hoseMaxOrderQty = [[allDataDictionary objectForKey:@"hoseMaxOrderQty"] doubleValue];
     self.hnxMaxOrderQty = [[allDataDictionary objectForKey:@"hnxMaxOrderQty"] doubleValue];
     self.upcomMaxOrderQty = [[allDataDictionary objectForKey:@"upcomMaxOrderQty"] doubleValue];
+    
+    self.marketStatus = [allDataDictionary objectForKey:@"marketStatus"];
+    self.timeChangeOnlineData = [[allDataDictionary objectForKey:@"timeChangeOnlineData"] doubleValue];
+    self.timeChangePriceboard = [[allDataDictionary objectForKey:@"timeChangePriceboard"] doubleValue];
+    NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
+    [user setDouble:self.timeChangeOnlineData forKey:@"timeChangeOnlineData"];
+    [user setDouble:self.timeChangePriceboard forKey:@"timeChangePriceboard"];
+    [user synchronize];
+    self.ternLink = [allDataDictionary objectForKey:@"ternLink"];
+    self.supportLink = [allDataDictionary objectForKey:@"supportLink"];
+    self.instructionLink = [allDataDictionary objectForKey:@"intructionLink"];
     
     [arr release];
     //[post release];
@@ -86,6 +108,7 @@
 {
     if([marketId isEqualToString:@"HO"])
     {
+        if( self.hsxOrderType!=nil &&  self.hsxOrderType.count>0)
         for(NSArray *arr in self.hsxOrderType)
         {
             if([[arr objectAtIndex:0] isEqualToString:type])
@@ -95,6 +118,7 @@
     else
         if([marketId isEqualToString:@"HA"])
         {
+            if( self.hnxOrderType!=nil &&  self.hnxOrderType.count>0)
             for(NSArray *arr in self.hnxOrderType)
             {
                 if([[arr objectAtIndex:0] isEqualToString:type])
@@ -104,6 +128,7 @@
         else
             if([marketId isEqualToString:@"UPCOM"])
             {
+                if( self.upcomOrderType!=nil &&  self.upcomOrderType.count>0)
                 for(NSArray *arr in self.upcomOrderType)
                 {
                     if([[arr objectAtIndex:0] isEqualToString:type])
@@ -114,6 +139,7 @@
 }
 -(NSString*) getOrderStatus:(NSString*)status langue:(int)VN0_EN1
 {
+    if( self.orderStatusList!=nil &&  self.orderStatusList.count>0)
     for(NSArray *arr in self.orderStatusList)
     {
         if([[arr objectAtIndex:0] isEqualToString:status]){
@@ -127,13 +153,13 @@
 }
 -(void) dealloc
 {
-    [_orderStatusList release];
-    [_hsxOrderType release];
-    [_hnxOrderType release];
-    [_upcomOrderType release];
-    [_hoseStepPrice release];
-    [_hnxStepPrice release];
-    [_upcomStepPrice release];
+    [orderStatusList release];
+    [hsxOrderType release];
+    [hnxOrderType release];
+    [upcomOrderType release];
+    [hoseStepPrice release];
+    [hnxStepPrice release];
+    [upcomStepPrice release];
     [super dealloc];
 }
 

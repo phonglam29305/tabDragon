@@ -66,8 +66,8 @@
         int tempEnd = MAX(startCellY, endCellY);
         for(int i = tempStart; i <= tempEnd; i++) {
             //// selectedRect Drawing
-            int thisRowEndCell;
-            int thisRowStartCell;
+            int thisRowEndCell=0;
+            int thisRowStartCell=0;
             if(startCellY == i) {
                 thisRowStartCell = startCellX;
                 if (startCellY > endCellY) {
@@ -94,7 +94,8 @@
             }
             //// selectedRect Drawing
 			float width_offset= UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone ? 25 : 20; //device specific width offset i.e., iPhone vs iPad
-            UIBezierPath* selectedRectPath = [UIBezierPath bezierPathWithRoundedRect: CGRectMake(MIN(thisRowStartCell, thisRowEndCell)*hDiff, i*vDiff, (ABS(thisRowEndCell-thisRowStartCell))*hDiff+width_offset, 21) cornerRadius: cornerRadius];
+            int abs = ABS(thisRowEndCell-thisRowStartCell);
+            UIBezierPath* selectedRectPath = [UIBezierPath bezierPathWithRoundedRect: CGRectMake(MIN(thisRowStartCell, thisRowEndCell)*hDiff, i*vDiff, (abs)*hDiff+width_offset, 21) cornerRadius: cornerRadius];
             CGContextSaveGState(context);
             [selectedRectPath addClip];
             CGContextDrawLinearGradient(context, gradient3, CGPointMake((MIN(thisRowStartCell, thisRowEndCell)+.5)*hDiff, (i+1)*vDiff), CGPointMake((MIN(thisRowStartCell, thisRowEndCell)+.5)*hDiff, i*vDiff), 0);

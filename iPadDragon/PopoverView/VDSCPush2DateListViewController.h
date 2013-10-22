@@ -14,4 +14,5 @@
 @property (strong, nonatomic) id delegate;
 @property (strong, nonatomic) NSMutableArray *array_TKUQ;
 @property (strong, nonatomic) NSMutableArray *array_agent;
+-(void)loadData;
 @end

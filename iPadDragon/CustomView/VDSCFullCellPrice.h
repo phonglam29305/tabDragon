@@ -14,9 +14,7 @@
 
 @property (retain, nonatomic) IBOutlet UILabel *f_ma;
 
-@property (strong, nonatomic) IBOutlet UILabel *f_tran;
-@property (strong, nonatomic) IBOutlet UILabel *f_san;
-@property (strong, nonatomic) IBOutlet UILabel *f_thamChieu;
+@property (retain, nonatomic) UIPopoverController *popover;
 
 @property (strong, nonatomic) IBOutlet UILabel *f_mua3_gia;
 @property (strong, nonatomic) IBOutlet UILabel *f_mua3_kl;

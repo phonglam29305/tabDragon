@@ -56,7 +56,7 @@
     [self.otpView addSubview:otp];
     
     array_Orders=[[NSMutableArray alloc]init];
-    loading = [utils showLoading:self.tabOrdersConfirmList];
+    loading = [[utils showLoading:self.tabOrdersConfirmList] retain];
     [self performSelectorInBackground:@selector(LoadOrdersConfirm) withObject:nil];
     [self.tabOrdersConfirmList setDataSource:self];
     [self.tabOrdersConfirmList setDelegate:self];
@@ -105,6 +105,7 @@
                ];
         NSString *post = [utils postValueBuilder:arr];
         allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
+        if([allDataDictionary isEqual:[NSNull null]])return;
         [array_Orders removeAllObjects];
         if([[allDataDictionary objectForKey:@"success"] boolValue])
         {
@@ -183,7 +184,9 @@
         //------5.11111111111111111
         if(cell == nil)
         {
-            cell = [[VDSCOrderConfirmServicesCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
+            //cell = [[VDSCOrderConfirmServicesCell alloc]initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
+            NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCOrderConfirmServicesCell" owner:self options:nil];
+            cell = [nibArray objectAtIndex:0];
         }
         //------5.22222222222222222
         
@@ -273,11 +276,11 @@
                         ,nil
                         ];
         NSString *post = [utils postValueBuilder:arr];
-        NSDictionary *allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
+        NSDictionary *allDataDictionary = [[utils getDataFromUrl:url method:@"POST" postData:post] retain];
         
         if([[allDataDictionary objectForKey:@"success"] boolValue])
         {
-            loading =[utils showLoading:self.tabOrdersConfirmList];
+            //loading =[utils showLoading:self.tabOrdersConfirmList];
             [self performSelectorInBackground:@selector(LoadOrdersConfirm) withObject:nil ];
             [utils showMessage:[utils.dic_language objectForKey:@"ipad.services.orderConfirm.confirmSuccess"] messageContent:nil dismissAfter: 1];
             [otp resetOtpPosition];

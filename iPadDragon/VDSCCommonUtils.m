@@ -33,21 +33,28 @@
 @synthesize keyParaKey;
 @synthesize keyParaValue;
 @synthesize dic_language;
+@synthesize clientInfo;
+@synthesize rowHeight;
+@synthesize fontFamily;
+@synthesize fontSize;
+@synthesize cellBackgroundColor;
 
--(VDSCCommonUtils *)init
+-(id)init
 {
+    self = [super init];
     //self.delegate = delegate;
-    NSUserDefaults *client = [NSUserDefaults standardUserDefaults];
-    self.clientInfo = [VDSCClientInfo alloc];
-    self.clientInfo.clientID = [client objectForKey:@"clientID"];
-    self.clientInfo.clientName = [client objectForKey:@"clientName"];
-    self.clientInfo.tradingAccSeq = [client objectForKey:@"tradingAccSeq"];
-    self.clientInfo.accountType = [client objectForKey:@"accountType"];
-    self.clientInfo.secret = [client objectForKey:@"secret"];
-    self.clientInfo.phone = [client objectForKey:@"phone"];
-    self.clientInfo.email = [client objectForKey:@"email"];
+    NSUserDefaults *client = [[NSUserDefaults standardUserDefaults] retain];
+    clientInfo = [VDSCClientInfo alloc];
+    clientInfo.clientID = [client objectForKey:@"clientID"];
+    clientInfo.clientName = [client objectForKey:@"clientName"];
+    clientInfo.tradingAccSeq = [client objectForKey:@"tradingAccSeq"];
+    clientInfo.accountType = [client objectForKey:@"accountType"];
+    clientInfo.secret = [client objectForKey:@"secret"];
+    clientInfo.phone = [client objectForKey:@"phone"];
+    clientInfo.email = [client objectForKey:@"email"];
+    [client release];
     
-    NSLocale *locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    NSLocale *locale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US"] autorelease];
     
     //NSLocale *locale = [[NSLocale alloc] initWithLocaleIdentifier:@"vi_VN"];
     
@@ -90,7 +97,7 @@
     c_thamChieu = [[UIColor colorWithRed:249/255.0 green:186/255.0 blue:75/255.0 alpha:1] retain];
     c_koThayDoi = [[UIColor colorWithRed:200/255.0 green:199/255.0 blue:68/255.0 alpha:1] retain];
     c_tang = [UIColor greenColor];//[[UIColor colorWithRed:0/255.0 green:178/255.0 blue:56/255.0 alpha:1] retain];
-    c_giam = [UIColor redColor];//[[UIColor colorWithRed:191/255.0 green:0/255.0 blue:23/255.0 alpha:1] retain];
+    self.c_giam = [UIColor redColor];//[[UIColor colorWithRed:191/255.0 green:0/255.0 blue:23/255.0 alpha:1] retain];
     
     self.soapMessage = @"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
     "<SOAP-ENV:Envelope \n"
@@ -109,12 +116,12 @@
     keyParaValue=@":::";
     keyParaKey=@"@@@";
     
-    self.rowHeight=30;
-    self.fontFamily=@"arial";
-    self.fontSize=14;
-    self.cellBackgroundColor = [[UIColor colorWithRed:40/255.0 green:40/255.0 blue:40/255.0 alpha:1] retain];
+    rowHeight=30;
+    fontFamily=@"arial";
+    fontSize=14;
+    cellBackgroundColor = [[UIColor colorWithRed:40/255.0 green:40/255.0 blue:40/255.0 alpha:1] retain];
     [self initLanguage];
-    return self;
+    return [self retain];
 }-(void)initLanguage
 {
     
@@ -269,7 +276,7 @@
     else if(x==4)row=@"E";
     NSString *number2 = [NSString stringWithFormat:@"%@%d", row, y+1];
     
-    NSArray *arr = [[NSArray alloc] initWithObjects: number1, number2, nil];
+    NSArray *arr = [[[NSArray alloc] initWithObjects: number1, number2, nil] autorelease];
     return arr;
 }
 -(NSArray*)getOPTPosition: (NSString*)OTPPosition1 OTPPosition2:(NSString*)OTPPosition2
@@ -292,7 +299,7 @@
     
     NSString *yy = [NSString stringWithFormat:@"%d", [[OTPPosition2 substringFromIndex:1] intValue]-1];
     
-    NSArray *arr = [[NSArray alloc] initWithObjects: [NSString stringWithFormat:@"%@,%@", y,yy], [NSString stringWithFormat:@"%@,%@", x,xx], nil];
+    NSArray *arr = [[[NSArray alloc] initWithObjects: [NSString stringWithFormat:@"%@,%@", y,yy], [NSString stringWithFormat:@"%@,%@", x,xx], nil] autorelease];
     return arr;
 }
 -(BOOL)otpCherker:(NSString*)OTPPosition1 OTPPosition2:(NSString*)OTPPosition2  OTPPosition1_Value:(NSString*)OTPPosition1_Value OTPPosition2_value:(NSString*)OTPPosition2_Value isSave:(BOOL)isSave
@@ -309,7 +316,7 @@
                     , @"KW_OTP_SAVE",isSave?@"10":@"0"
                     , nil];
     NSString *post = [self postValueBuilder:arr];
-    NSDictionary *allDataDictionary = [self getDataFromUrl:url method:@"POST" postData:post];
+    NSDictionary *allDataDictionary = [[self getDataFromUrl:url method:@"POST" postData:post] retain];
     if([[allDataDictionary objectForKey:@"success"] boolValue])
     {
         if(isSave){
@@ -317,11 +324,14 @@
             [user setBool:YES forKey:@"saveOTP"];
             [user synchronize];
         }
+        [arr release];
+        [allDataDictionary release];
         return YES;
     }
     else{
-        //UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"OTP không được xác thực!" message:@"Vui lòng kiểm tra lại giá trị nhập liệu" delegate:self cancelButtonTitle:@"OK" otherButtonTitles:nil, nil];
-        //[alert show];
+        
+        [arr release];
+        [allDataDictionary release];
         return NO;
     }
     [arr release];
@@ -401,17 +411,19 @@
 }
 -(VDSCStock4OrderEntity*) loadStockInfo:(NSString*)stockId marketId:(NSString*) marketId orderSide:(NSString*)orderSide
 {
-    VDSCStock4OrderEntity *entity = [[VDSCStock4OrderEntity alloc] init];
+    VDSCStock4OrderEntity *entity = [[[VDSCStock4OrderEntity alloc] init] autorelease];
+    marketId = marketId == nil?@"HO":[marketId uppercaseString];
+    @try{
     NSArray *arr = [[NSArray alloc] initWithObjects:
                     @"KW_CLIENTSECRET",self.clientInfo.secret
                     , @"KW_CLIENTID", self.clientInfo.clientID
                     , @"KW_STOCKCODE", stockId
-                    , @"KW_MARKETID", [marketId uppercaseString]
+                    , @"KW_MARKETID", marketId
                     , @"KW_ORDER_SIDE", orderSide
                     , nil];
     NSString *post = [self postValueBuilder:arr];
     NSString *url = [[NSUserDefaults standardUserDefaults] stringForKey:@"stock4Order"];
-    NSDictionary *allDataDictionary = [self getDataFromUrl:url method:@"POST" postData:post];
+    NSDictionary *allDataDictionary = [[self getDataFromUrl:url method:@"POST" postData:post] retain];
     if(![allDataDictionary isEqual:[NSNull null]])
     {
         if([[allDataDictionary objectForKey:@"success"] boolValue])
@@ -419,19 +431,25 @@
             NSArray *array = [allDataDictionary objectForKey:@"stock"] ;
             if(![array isEqual:[NSNull null]])
             {
-                entity . reference=[[array objectAtIndex:0] floatValue];
-                entity . ceiling=[[array objectAtIndex:2] doubleValue];
-                entity . floor=[[array objectAtIndex:1] doubleValue];
-                
+                entity.reference=[[array objectAtIndex:0] floatValue];
+                entity.ceiling=[[array objectAtIndex:2] doubleValue];
+                entity.floor=[[array objectAtIndex:1] doubleValue];
+                entity.marketId = [array objectAtIndex:7];
                 entity.status = [array objectAtIndex:3];
                 entity.name = [array objectAtIndex:4];
                 entity.nameEN = [array objectAtIndex:5];
                 entity.usable = [[allDataDictionary objectForKey:@"usableBal"] doubleValue];
                 entity.block = [[array objectAtIndex:6] doubleValue];
             }
+            entity.marketStatus = [allDataDictionary objectForKey:@"marketStatus"];
         }
     }
     [arr release];
+    [allDataDictionary release];
+    }
+    @catch (NSException *ex) {
+        NSLog(ex.description);
+    }
     return  entity;
 }
 - (IBAction)grabURLInTheBackground:(ASIFormDataRequest *)request
@@ -486,7 +504,7 @@
 
 -(UIWebView*)showLoading:(UIView*)onView
 {
-    UIWebView *view = [[UIWebView alloc] init];
+    UIWebView *view = [[[UIWebView alloc] init] autorelease];
     view.backgroundColor=[UIColor clearColor];// self.cellBackgroundColor;
     [view setOpaque:NO];
     [view setUserInteractionEnabled:NO];
@@ -510,13 +528,14 @@
 
 -(void) dealloc
 {
-    [_clientInfo release];
+    [clientInfo release];
     /*[c_giam release];
     [c_koThayDoi release];
     [c_san release];
     [c_tang release];
     [c_thamChieu release];
     [c_tran release];*/
+    [numberFormatter release];
     [numberFormatter2Digits release];
     [numberFormatter3Digits release];
     [queue cancelAllOperations];

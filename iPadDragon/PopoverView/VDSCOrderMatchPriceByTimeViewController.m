@@ -47,7 +47,7 @@
     NSString *post = [utils postValueBuilder:arr];
     
     NSString *url = [[NSUserDefaults standardUserDefaults] stringForKey:@"orderMatchPriceList"];
-    NSDictionary *allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
+    NSDictionary *allDataDictionary = [[utils getDataFromUrl:url method:@"POST" postData:post] retain];
     if([[allDataDictionary objectForKey:@"success"] boolValue])
     {
         if(![[allDataDictionary objectForKey:@"list"] isEqual:[NSNull null]])
@@ -59,6 +59,8 @@
         if(array.count>0)
             [self.table_accList reloadData];
     }
+    [arr release];
+    [allDataDictionary release];
 }
 -(NSInteger) numberOfSectionsInTableView:(UITableView *)tableView
 {return 1;}
@@ -70,14 +72,15 @@
 }
 -(UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
+        
+        NSInteger i=indexPath.row;
+        NSArray *dic = [array objectAtIndex:i];
     NSString *cellIndentifier = @"VDSCFullCellPrice";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier: cellIndentifier];
     if(cell == nil)
     {
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-        
-        NSInteger i=indexPath.row;
-        NSArray *dic = [array objectAtIndex:i];
+        [cell autorelease];
         
         //if([nsclass class]){return cell;}
         int x=0;
@@ -86,6 +89,7 @@
         label.text = [dic objectAtIndex:2];
         label.backgroundColor = [UIColor clearColor];
         label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.tag=10;
         [cell addSubview:label];
         [label release];
         
@@ -97,6 +101,7 @@
         label.backgroundColor = [UIColor clearColor];
         label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
         label.textAlignment = UITextAlignmentRight;
+        label.tag=11;
         [cell addSubview:label];
         [label release];
         
@@ -108,15 +113,22 @@
         label.backgroundColor = [UIColor clearColor];
         label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
         label.textAlignment = UITextAlignmentRight;
+        label.tag=12;
         [cell addSubview:label];
         [label release];
     }
-    /*label = [[UILabel alloc] init];
-     label.frame = CGRectMake(label.frame.origin.x+5, 0, 100, 24);
-     label.text = [dic objectForKey:@"accountId"];
-     label.backgroundColor = [UIColor clearColor];
-     label.font = [UIFont fontWithName:@"arial" size:15];
-     [cell addSubview:label];*/
+    else{
+        UILabel *label = (UILabel*)[cell viewWithTag:10];
+        label.text = [dic objectAtIndex:2];
+        
+        label = (UILabel*)[cell viewWithTag:11];
+        double d=[[dic objectAtIndex:1] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+        
+        label = (UILabel*)[cell viewWithTag:12];
+        d=[[dic objectAtIndex:0] doubleValue];
+        label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+    }
     
     return  cell;
     

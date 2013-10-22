@@ -39,9 +39,7 @@
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
 {      
     self = [super initWithStyle:style reuseIdentifier:@"VDSCStockBalanceCell"];
-    if (self) {
-        NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCStockBalanceCell" owner:self options:nil];
-        self = [nibArray objectAtIndex:0];        
+    if (self) {      
     }
     return self;
 }

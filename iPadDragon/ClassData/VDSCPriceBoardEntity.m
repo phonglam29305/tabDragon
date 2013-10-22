@@ -9,17 +9,17 @@
 #import "VDSCPriceBoardEntity.h"
 
 @implementation VDSCPriceBoardEntity
--(VDSCPriceBoardEntity*)init
+/*-(VDSCPriceBoardEntity*)init
 {
-    VDSCPriceBoardEntity *entity = [VDSCPriceBoardEntity alloc];
+    self = [VDSCPriceBoardEntity alloc];
     
-    entity.f_tran = [[NSArray alloc] initWithObjects:@"0", @"", nil];
-    entity.f_san = [[NSArray alloc] initWithObjects:@"0", @"", nil];
-    entity.f_thamchieu = [[NSArray alloc] initWithObjects:@"0", @"", nil];
-    entity.f_trungBinh = [[NSArray alloc] initWithObjects:@"0", @"", nil];
+    self.f_tran = [[NSArray alloc] initWithObjects:@"0", @"", nil];
+    self.f_san = [[NSArray alloc] initWithObjects:@"0", @"", nil];
+    self.f_thamchieu = [[NSArray alloc] initWithObjects:@"0", @"", nil];
+    self.f_trungBinh = [[NSArray alloc] initWithObjects:@"0", @"", nil];
     
-    return entity;
-}
+    return self;
+}*/
 
 -(void) dealloc
 {

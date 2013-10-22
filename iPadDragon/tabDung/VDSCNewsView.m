@@ -40,9 +40,9 @@
 }
 -(void) loadView
 {
-    self.f_videoFram = [[VDSCYoutubeView alloc]
-                        initWithStringAsURL:@"http://www.youtube.com/embed/6Hq2AHWIv1E"
-                        frame:self.f_videoFram.frame];
+    //self.f_videoFram = [[VDSCYoutubeView alloc]
+      //                  initWithStringAsURL:@"http://www.youtube.com/embed/6Hq2AHWIv1E"
+        //                frame:self.f_videoFram.frame];
 }
 
 - (void)dealloc {

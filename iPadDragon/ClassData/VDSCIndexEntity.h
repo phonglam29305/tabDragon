@@ -18,5 +18,6 @@
 @property (strong, nonatomic) NSString *amount;
 @property (strong, nonatomic) NSString *color;
 
+-(VDSCIndexEntity*)initWithDefault:(NSString*)marketName;
 -(VDSCIndexEntity*)initWithObjects: (NSString*)marketName :(NSString*)value :(NSString*)changePer :(NSString*)mark :(NSString*) change : (NSString*) amount : (NSString*)color;
 @end

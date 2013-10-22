@@ -28,7 +28,6 @@
     NSMutableArray *array;
     double DepositoryFree;
     double fixedLoan;
-    NSTimer *timer;
     UIWebView *loading;
     
     
@@ -60,6 +59,7 @@
 @synthesize lbColorGiaTriCK;
 @synthesize txtTongTaiSan;
 @synthesize lbColorTongTaiSan;
+@synthesize timer;
 
 
 - (id)initWithFrame:(CGRect)frame
@@ -80,8 +80,7 @@
     array_ObjectStockBaklance_root=[[NSMutableArray alloc] init];
     array_ObjectStockStatus_root=[[NSMutableArray alloc] init];
     
-    self.array_ObjectStockBaklance=[[NSArray alloc] init];
-    self.array_ObjectStockStatus=[[NSArray alloc] init];
+    
     [self initControls];
     loading = [utils showLoading:self];
     [self sheduleData];
@@ -428,7 +427,7 @@
     
 }
 
-- (void)requestWentWrong:(ASIHTTPRequest *)request
+- (void)requestWentWrong:(ASIFormDataRequest *)request
 {
     NSError *error = [request error];
     NSLog(error.description);
@@ -525,12 +524,12 @@ static int mySortFunc(NSDictionary *dico1, NSDictionary *dico2, void *context)
             {
                 
                 StockBalance = [[[NSBundle mainBundle] loadNibNamed:@"VDSCStockBalance" owner:self options:nil] objectAtIndex:0];
-                StockBalance.frame = CGRectMake(0, 33, width, 590);
+                StockBalance.frame = CGRectMake(0, 33, width, 612);
                 StockBalance.backgroundColor=[UIColor blackColor];
                 StockBalance.delegate=self;
                 [self addSubview:StockBalance];
             }
-            [StockBalance LoadStockBalancce];
+            //[StockBalance LoadStockBalancce];
             [self bringSubviewToFront:StockBalance];
             break;
             
@@ -538,12 +537,12 @@ static int mySortFunc(NSDictionary *dico1, NSDictionary *dico2, void *context)
             if(StockStatus==nil)
             {
                 StockStatus = [[[NSBundle mainBundle] loadNibNamed:@"VDSCStockStatus" owner:self options:nil] objectAtIndex:0];
-                StockStatus.frame = CGRectMake(0, 33, width, 590);
+                StockStatus.frame = CGRectMake(0, 33, width, 612);
                 StockStatus.backgroundColor=[UIColor blackColor];
                 StockStatus.delegate=self;
                 [self addSubview:StockStatus];
             }
-            [StockStatus LoadStockStatus];
+            //[StockStatus LoadStockStatus];
             [self bringSubviewToFront:StockStatus];
             
             
@@ -594,7 +593,7 @@ static int mySortFunc(NSDictionary *dico1, NSDictionary *dico2, void *context)
     [lbColorGiaTriCK release];
     [txtTongTaiSan release];
     [lbColorTongTaiSan release];
-    [timer invalidate];
+    //[timer invalidate];
     timer = nil;
     [queue cancelAllOperations];
     [super dealloc];

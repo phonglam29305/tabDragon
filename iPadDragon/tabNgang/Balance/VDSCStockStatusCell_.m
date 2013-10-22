@@ -39,8 +39,7 @@
 {
     self = [super initWithStyle:style reuseIdentifier:@"VDSCStockStatusCell_"];
     if (self) {
-        NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCStockStatusCell_" owner:self options:nil];
-        self = [nibArray objectAtIndex:0];
+        
         //[self setBackgroundView:[nibArray objectAtIndex:1]];
     }
     return self;

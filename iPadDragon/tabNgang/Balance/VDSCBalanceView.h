@@ -7,7 +7,6 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "CPPickerViewCell.h"
 
 @interface VDSCBalanceView : UIView
 @property (retain, nonatomic) IBOutlet UIView *tabbBalance;
@@ -46,4 +45,5 @@
 @property (nonatomic,assign)  double TongTienGiaTriChungKhoan;
 @property (nonatomic,assign)  double TongTienKhaNangNhanNo;
 
+@property(retain, nonatomic) NSTimer *timer;
 @end

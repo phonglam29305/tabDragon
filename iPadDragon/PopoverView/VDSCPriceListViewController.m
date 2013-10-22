@@ -57,8 +57,10 @@
 {
     NSString *cellIndentifier = @"VDSCFullCellPrice";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier: cellIndentifier];
-    if(cell == nil)
+    if(cell == nil){
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
+        [cell autorelease];
+    }
     if(self.type_1list_2category==1)
         cell.textLabel.text = [source objectAtIndex:indexPath.row];
     else
@@ -92,15 +94,13 @@
 {
     NSURL *url = [NSURL URLWithString:@"http://priceboard.vdsc.com.vn/ipad/sectors.jsp?langId=vi_VN"];
     NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url];
-    if (connection_index ==nil) {
+    //if (connection_index ==nil) {
         connection_index = [[NSURLConnection alloc] initWithRequest:request delegate:self];
         //connection_index
         if(connection_index)
             webData_index = [[NSMutableData alloc] init];
-    }
+    //}
     [request release];
-    [connection_index release];
-    connection_index = nil;
 }
 -(void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
@@ -126,6 +126,8 @@
     }
     [self.tableView reloadData];
     [array release];
+    [connection_index release];
+    connection_index =nil;
 }
 
 - (void)didReceiveMemoryWarning
@@ -135,10 +137,17 @@
 }
 
 - (void)dealloc {
-    [_tableView release];
-    [array_index release];
-    [connection_index release];
     [super dealloc];
+}
+-(void)viewWillDisappear:(BOOL)animated
+{
+    if(source!=nil)
+    [source release];
+    [_tableView release];
+    if(array_index!=nil)
+    [array_index release];
+    if(webData_index!=nil)
+    [webData_index release];
 }
 - (void)viewDidUnload {
     [self setTableView:nil];

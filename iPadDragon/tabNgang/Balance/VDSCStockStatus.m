@@ -37,7 +37,7 @@
     utils=[[VDSCCommonUtils alloc]init];
     //[self performSelectorInBackground:@selector(initControls) withObject: nil];
     [self initControls];
-    loading = [utils showLoading:self.tableStockStaus];
+    //loading = [utils showLoading:self.tableStockStaus];
     //timer = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(sheduleData) userInfo:nil repeats:YES];
     //[timer fire];
 }
@@ -61,6 +61,7 @@
 
 -(void) LoadStockStatus
 {
+    if(self.delegate !=nil){
     [self.tableStockStaus reloadData];
     
     if(loading !=nil)
@@ -69,7 +70,7 @@
         [loading release];
         loading=nil;
     }
-    
+    }
 }
 //--------------------------------------------------
 
@@ -100,8 +101,9 @@
         balance = (VDSCBalanceView*)self.delegate;
         if(cell == nil)
         {
-            cell = [[VDSCStockStatusCell_ alloc] init];
-           
+            //cell = [[VDSCStockStatusCell_ alloc] init];
+            NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCStockStatusCell_" owner:self options:nil];
+            cell = [nibArray objectAtIndex:0];
         }
         //[cell SetData2Cell:(VDSCObjectStockStatus *)[array_ObjectStockStatus objectAtIndex:indexPath]];
         if (balance.array_ObjectStockStatus  != nil && balance.array_ObjectStockStatus.count>0)
@@ -109,9 +111,10 @@
             cell.CellData= [[balance.array_ObjectStockStatus objectAtIndex:indexPath.row] retain];
             [cell SetData2Cell:(VDSCObjectStockBalance *)[balance.array_ObjectStockStatus objectAtIndex:indexPath.row]];
         }
-        for(UIView *label in [cell subviews])
+        for(UIView *scrollview in [cell subviews])
         {
-            
+            for(UIView *label in [scrollview subviews])
+            {
             if([label isKindOfClass:[UILabel class]])
             {
                 [((UILabel*)label)setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
@@ -121,6 +124,17 @@
                 ((UILabel*)label).backgroundColor = utils.cellBackgroundColor;
                 if([((UILabel*)label).text isEqualToString:@"0  "])
                     ((UILabel*)label).text=@"";
+            }
+            }
+            if([scrollview isKindOfClass:[UILabel class]])
+            {
+                [((UILabel*)scrollview)setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+                CGRect rect= ((UILabel*)scrollview).frame;
+                rect.size = CGSizeMake(((UILabel*)scrollview).frame.size.width,utils.rowHeight-1);
+                ((UILabel*)scrollview).frame=rect;
+                ((UILabel*)scrollview).backgroundColor = utils.cellBackgroundColor;
+                if([((UILabel*)scrollview).text isEqualToString:@"0  "])
+                    ((UILabel*)scrollview).text=@"";
             }
         }
         CGRect rect= cell.frame;

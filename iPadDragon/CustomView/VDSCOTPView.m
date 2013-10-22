@@ -51,6 +51,7 @@
     self.f_otpNumber.text=[NSString stringWithFormat:@"Số thẻ - %@", [[NSUserDefaults standardUserDefaults] objectForKey:@"OTPNumber"]];}
 
 - (IBAction)btn_saveOTP_Touch:(id)sender {
+    @try{
     if([self checkInput]){
         if([utils otpCherker:self.otp_number1.text OTPPosition2:self.otp_number2.text OTPPosition1_Value:self.otp_number1Value.text OTPPosition2_value:self.otp_number2Value.text isSave:YES])
         {
@@ -61,6 +62,10 @@
         {
             [utils showMessage:[utils.dic_language objectForKey:@"ipad.otp.saveFail"] messageContent:nil dismissAfter:3];
         }
+    }
+    }
+    @catch (NSException *ex) {
+        NSLog(ex.description);
     }
 }
 -(void) touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
@@ -89,10 +94,10 @@
 }
 -(void) dealloc
 {
-    [self.otp_number1 release];
-    [self.otp_number1Value release];
-    [self.otp_number2 release];
-    [self.otp_number2Value release];
+    [_otp_number1 release];
+    [_otp_number1Value release];
+    [_otp_number2 release];
+    [_otp_number2Value release];
     [timer invalidate];
     timer =nil;
     [super dealloc];

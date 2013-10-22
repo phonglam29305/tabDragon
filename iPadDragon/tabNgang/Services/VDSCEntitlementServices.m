@@ -24,7 +24,7 @@
     NSDate *fdate;
     NSDate *tdate;
 }
-
+@synthesize popoverController;
 - (id)initWithFrame:(CGRect)frame
 {
     self = [super initWithFrame:frame];
@@ -225,7 +225,8 @@
 - (IBAction)btn_MaCK_touch:(id)sender {
     VDSCPush2DateListViewController *popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
     popover_push2DateList.delegate=self;
-    self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
+    if(popoverController==nil)
+    popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
     CGRect rect=((UIButton*)sender).frame;//CGRectMake(((UIButton*)sender).frame.origin.x, ((UIButton*)sender).frame.origin.y+35, 50, 30);
     [self.popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     
@@ -414,15 +415,18 @@
 }
 -(UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    NSString *cellIndentifier = @"VDSCFullCellPrice";
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-    UIView *bg_view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, cell.frame.size.height)];
-    bg_view.backgroundColor= [UIColor darkGrayColor];
-    cell.backgroundView = bg_view;
-    //}
     NSInteger i=indexPath.row;
     VDSCEntitlementEntity *item = [array objectAtIndex:i];
     UIColor *color = [UIColor lightGrayColor];
+    NSString *cellIndentifier = @"VDSCFullCellPrice";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIndentifier];
+    if(cell==nil){
+        cell= [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
+        [cell autorelease];
+    UIView *bg_view = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, cell.frame.size.height)] autorelease];
+    bg_view.backgroundColor= [UIColor darkGrayColor];
+    cell.backgroundView = bg_view;
+    //}
     
     int x=0;
     UILabel *label = [[UILabel alloc] init];
@@ -456,7 +460,7 @@
     label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
     label.textColor = color;
     label.textAlignment = UITextAlignmentRight;
-    label.tag=11;
+    label.tag=12;
     [cell addSubview:label];
     [label release];
     
@@ -468,7 +472,7 @@
     label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
     label.textColor = color;
     label.textAlignment = UITextAlignmentRight;
-    label.tag=11;
+    label.tag=13;
     [cell addSubview:label];
     [label release];
     
@@ -480,7 +484,7 @@
     label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
     label.textColor = color;
     label.textAlignment = UITextAlignmentRight;
-    label.tag=11;
+    label.tag=14;
     [cell addSubview:label];
     [label release];
     
@@ -493,7 +497,7 @@
     label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
     label.textColor = color;
     label.textAlignment = UITextAlignmentCenter;
-    label.tag=11;
+    label.tag=15;
     [cell addSubview:label];
     [label release];
     
@@ -507,10 +511,32 @@
     label.font = [UIFont fontWithName:utils.fontFamily size:13];
     label.textColor = color;
     label.textAlignment = UITextAlignmentCenter;
-    label.tag=11;
+    label.tag=15;
     [cell addSubview:label];
     [label release];
-    
+    }
+    else{
+        UILabel *label = (UILabel*) [cell viewWithTag:10];
+        label.text = item.startRegDate;
+        
+        label = (UILabel*) [cell viewWithTag:11];
+        label.text = item.stockId;
+
+        label = (UILabel*) [cell viewWithTag:12];
+        label.text = [utils.numberFormatter stringFromNumber:[NSNumber numberWithInt: item.remainQty]];
+        
+        label = (UILabel*) [cell viewWithTag:13];
+        label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:item.buyPrice]];
+        
+        label = (UILabel*) [cell viewWithTag:14];
+        label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:item.amount]]];
+        
+        label = (UILabel*) [cell viewWithTag:15];
+        label.text = item.status;
+        
+        label = (UILabel*) [cell viewWithTag:16];
+        label.text = item.note;
+    }
     
     return cell;
 }

@@ -19,6 +19,7 @@
 {
     VDSCCommonUtils *utils;
     VDSCSMSRegisterViewController *popoverView_sms;
+    UIPopoverController *popoverController;
     
 }
 @synthesize popover_sms;
@@ -63,14 +64,19 @@
 }
 
 - (IBAction)btn_agent_touch:(id)sender {
+    @try{
     if(![self.array_agent isEqual:[NSNull null]] && self.array_agent.count>0){
     VDSCPush2DateListViewController *popover_Vew = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
     popover_Vew.delegate = self;
     popover_Vew.array_agent = self.array_agent;
-    UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
+    UIPopoverController *popover = [[[UIPopoverController alloc] initWithContentViewController:popover_Vew] autorelease];
     CGRect rect=((UIButton*)sender).frame;
     rect.origin.y = rect.origin.y+90;
     [popover presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionLeft animated:YES];
+    }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 -(void)setData2Controls:(NSArray*)agent
@@ -86,6 +92,7 @@
 
 -(void) loadClientInfo
 {
+    @try{
     NSArray *arr = [[NSArray alloc] initWithObjects:@"KW_CLIENTSECRET",utils.clientInfo.secret, @"KW_CLIENTID", utils.clientInfo.clientID, nil];
     NSString *post = [utils postValueBuilder:arr];
     
@@ -145,24 +152,28 @@
     else{[self.btn_onlineTrangfer setTitle:@"" forState:UIControlStateNormal];}
     
     NSArray *agent = [allDataDictionary objectForKey:@"agent"];
-    self.array_agent = [[NSMutableArray alloc] init];
+    self.array_agent = [[[NSMutableArray alloc] init] autorelease];
     if(![agent isEqual:[NSNull null]])
     {
         for(NSArray *array in agent)
             [self.array_agent addObject:array];
     }
-    [arr release];
+        [arr release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
     
 
 
 - (void)dealloc {
     [_marketInfo release];
+    if(popoverController!=nil)
+       [popoverController release];
     [utils release];
     if(popover_sms !=nil)
     [popover_sms release];
-    if(popoverView_sms!=nil)
-       [popoverView_sms release];
     [_f_name release];
     [_f_clientid release];
     [_f_idcard release];
@@ -200,13 +211,14 @@
  
 - (IBAction)btn_onlineTranfer_touch:(id)sender {
     VDSCOnlineCashTransferViewController *popover_Vew = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"onlineCashTransferList"];
-    UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
+    popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
     //popover.delegate = self;
     CGRect rect=((UIButton*)sender).frame;
-    [popover presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    [popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
 }
 
 - (IBAction)btn_sms_touch:(id)sender {
+    @try{
     //if(popoverView_sms==nil)
     popoverView_sms = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"SMSRegister"];
     popover_sms = [[UIPopoverController alloc] initWithContentViewController:popoverView_sms];
@@ -215,9 +227,15 @@
     [popover_sms presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     //[popoverView_sms release];
     //popoverView_sms=nil;
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 - (IBAction)btn_accountChange:(id)sender {
+    @try{
     VDSCChangeAccountInfoViewController *popover_Vew = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"ChangeAccountInfo"];
     popover_changeInfo = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
     popover_Vew.delegate = self;
@@ -225,7 +243,11 @@
     popover_Vew.txt_sdt.text = self.btn_phone.titleLabel.text;
     
     popover_Vew.txt_email.text = self.btn_email.titleLabel.text;
-    [popover_changeInfo presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+        [popover_changeInfo presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 - (IBAction)btn_updatePass_touch:(id)sender {
     if([self checkInput]){

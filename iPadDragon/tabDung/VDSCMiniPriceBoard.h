@@ -55,6 +55,8 @@
 @property (retain, nonatomic) IBOutlet UILabel *process_ban;
 @property (retain, nonatomic) IBOutlet UIWebView *char_kl_gia;
 @property (retain, nonatomic)NSTimer *timer_price;
+@property (retain, nonatomic)NSTimer *timer_detail;
+@property (retain, nonatomic) IBOutlet UISegmentedControl *seq_chartType;
 
 //@property (strong, nonatomic) VDSCMarketInfo *market;
 - (IBAction)btn_buy_touch:(id)sender;

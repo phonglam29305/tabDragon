@@ -24,12 +24,13 @@
 @property (retain, nonatomic) IBOutlet UILabel *f_tongKL;
 @property (retain, nonatomic) IBOutlet UIWebView *chart_kl_gia;
 
-@property (strong, nonatomic) VDSCPriceBoardEntity *priceEntity;
+@property (retain, nonatomic) VDSCPriceBoardEntity *stockEntity;
 -(void)assignDataToControl;
 - (IBAction)btn_buy_touch:(id)sender;
 - (IBAction)btn_sell_touch:(id)sender;
 - (IBAction)btn_add_touch:(id)sender;
 - (IBAction)btn_remove_touch:(id)sender;
+-(void)loadChart;
 
 @property (strong, nonatomic) id delegate;
 @property (strong, nonatomic) VDSCMarketInfo *marketInfo;

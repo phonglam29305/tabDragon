@@ -21,7 +21,7 @@
 
 @interface VDSCMainViewController : UIViewController
 
-@property (retain, nonatomic) VDSCMarketInfo *market;
+@property (strong, nonatomic) VDSCMarketInfo *market;
 @property (assign, nonatomic) VDSCListView *list;
 @property (assign, nonatomic) VDSCMiniPriceBoard *miniPriceBoard;
 @property (assign, nonatomic) VDSCBusinessNewsView *businessNews;

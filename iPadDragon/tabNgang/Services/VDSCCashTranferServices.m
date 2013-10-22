@@ -19,7 +19,6 @@
 #import "VDSCOTPView.h"
 #import "VDSCOjectCashTransfer.h"
 #import "VDSCCashTranferServicesCell.h"
-#import "RadioButton.h"
 #import "ASIFormDataRequest.h"
 #import "VDSCMainViewController.h"
 
@@ -43,7 +42,6 @@
     NSDate *fdate;
     NSDate *tdate;
     
-    RadioButton *rb1;
     NSOperationQueue *queue;
 }
 
@@ -214,7 +212,7 @@
     
 }
 
-- (void)requestWentWrong:(ASIHTTPRequest *)request
+- (void)requestWentWrong:(ASIFormDataRequest *)request
 {
     NSError *error = [request error];
     NSLog(error.description);
@@ -686,7 +684,9 @@ clickedButtonAtIndex:(NSInteger)buttonIndex{
         //------5.11111111111111111
         if(cell == nil)
         {
-            cell = [[VDSCCashTranferServicesCell alloc] init];
+            NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCCashTranferServicesCell" owner:self options:nil];
+            cell = [nibArray objectAtIndex:0];
+            //cell = [[VDSCCashTranferServicesCell alloc] init];
         }
         //------5.22222222222222222
         

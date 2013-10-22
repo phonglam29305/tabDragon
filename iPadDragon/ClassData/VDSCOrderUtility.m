@@ -20,6 +20,7 @@
     NSMutableDictionary *array;
     NSOperationQueue *queue;
     double  temp;
+    NSString *orderTypeID;
 }
 
 @synthesize utils;
@@ -32,6 +33,7 @@
 }
 -(BOOL) checkContrain:(NSString*)orderType stockEntity:(VDSCPriceBoardEntity*)stockEntity params:(VDSCSystemParams*)params orderSide:(NSString*)orderSide price:(double)price qty:(double)qty amountWithFee:(double)amountWithFee isGtdOrder:(BOOL)isGtdOrder otpView:(VDSCOTPView*)otpView stock4Order:(VDSCStock4OrderEntity*)stock4Order
 {
+    @try{
     BOOL result = YES;
     NSString *message = @"";
     
@@ -44,14 +46,14 @@
         //    message = [NSString stringWithFormat:@"%@\n%@",message, @"Bạn chưa chọn mã chứng khoán"];
         
         //kiem tra loai lenh
-        
+        orderTypeID=@"";
         if([stockEntity.f_sanGD isEqualToString:@"HO"])
         {
             result = NO;
             for(NSArray *type in params.hsxOrderType)
             {
-                result=[orderType isEqualToString:[type objectAtIndex:0]];
-                if(result) break;
+                result=[orderType isEqualToString:[type objectAtIndex:1]];
+                if(result) {orderTypeID = [type objectAtIndex:0]; break;}
             }
             
         }
@@ -60,8 +62,8 @@
             result = NO;
             for(NSArray *type in params.hnxOrderType)
             {
-                result=[orderType isEqualToString:[type objectAtIndex:0]];
-                if(result) break;
+                result=[orderType isEqualToString:[type objectAtIndex:1]];
+                if(result) {orderTypeID = [type objectAtIndex:0]; break;}
             }
         }
         else if([stockEntity.f_sanGD isEqualToString:@"OTC"])
@@ -69,8 +71,8 @@
             result = NO;
             for(NSArray *type in params.upcomOrderType)
             {
-                result=[orderType isEqualToString:[type objectAtIndex:0]];
-                if(result) break;
+                result=[orderType isEqualToString:[type objectAtIndex:1]];
+                if(result) {orderTypeID = [type objectAtIndex:0]; break;}
             }
         }
         if(!result)
@@ -82,7 +84,7 @@
             result = (price>=stock4Order.floor && price <=stock4Order.ceiling);
         
         int step_value=0;
-        if(result)
+        if(result )//&& !([orderType isEqualToString:@"MOK"]||[orderType isEqualToString:@"MAK"]||[orderType isEqualToString:@"MTL"]))
         {
             result = price>0;
             if(result){
@@ -164,25 +166,27 @@
         // kiem tra khoi luong
         
         result=qty>0;
-        if(result){
-            float x = fmod(qty, stock4Order.block);
-            result = x==0;
+        if(!([orderTypeID isEqualToString:@"L"] && qty<100 && [stock4Order.marketId isEqualToString:@"HA"])){//lo le san hnx
+            if(result){
+                float x = fmod(qty, stock4Order.block);
+                result = x==0;
+            }
+            if(!result)
+                message = [NSString stringWithFormat:@"%@\n%@",message, [NSString stringWithFormat:[utils.dic_language objectForKey:@"ipad.order.worngQty"],[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:stock4Order.block]]]];
         }
-        if(!result)
-            message = [NSString stringWithFormat:@"%@\n%@",message, [NSString stringWithFormat:[utils.dic_language objectForKey:@"ipad.order.worngQty"],[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:stock4Order.block]]]];
         
         //kiem tra price tri dat so voi suc mua
         if([orderSide isEqualToString:@"B"])
         {
             if(amountWithFee > stock4Order.usable)
             {
-                result=NO;
+                //result=NO;
                 message = [NSString stringWithFormat:@"%@\n%@",message, [NSString stringWithFormat:[utils.dic_language objectForKey:@"ipad.order.worngBuyAmount"], [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:stock4Order.usable]]]];
             }
         }
         else{
             if(qty>stock4Order.usable){
-                result=NO;
+                //result=NO;
                 message = [NSString stringWithFormat:@"%@\n%@",message, [NSString stringWithFormat:[utils.dic_language objectForKey:@"ipad.order.worngSellQty"], [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:stock4Order.usable]]]];
             }
             
@@ -209,9 +213,131 @@
     }
     
     return message.length==0;
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+        return NO;
+    }
 }
-- (BOOL)sendOrder:(NSString*)orderType stockEntity:(VDSCPriceBoardEntity*)stockEntity params:(VDSCSystemParams*)params orderSide:(NSString*)orderSide price:(double)price qty:(double)qty amountWithFee:(double)amountWithFee isGtdOrder:(BOOL)isGtdOrder gtdDate:(NSString*)gtdDate otpView:(VDSCOTPView*)otpView {
-    
+-(NSString*)checkOrderMarket:(NSString*)orderType marketId:(NSString*)marketId stockCode:(NSString*)stockCode orderSide:(NSString*)orderSide
+{
+    @try{
+    NSString *result = @"";
+    if([orderType isEqualToString:@"ATC"] ||[orderType isEqualToString:@"C"] )
+        orderType=@"ATC";
+    else if([orderType isEqualToString:@"LO"] ||[orderType isEqualToString:@"L"] )
+        orderType=@"L";
+    if([orderType isEqualToString:@"ATC"] && [orderSide isEqualToString:@"E"])
+    {
+        result=@"Lệnh ATC không được sửa.";
+        return  result;
+    }
+    else{
+        if(stockCode == nil || [stockCode isEqualToString:@""]){result=@"Vui lòng nhập mã chứng khoán.";
+            return  result;}
+        VDSCStock4OrderEntity *stock4Order = [utils loadStockInfo:stockCode marketId:marketId orderSide:@"B"];
+        if(stock4Order!=Nil && stock4Order.ceiling==0){result=[NSString stringWithFormat: @"Không tồn tại mã chứng khoán: %@",stockCode];
+            return  result;}
+        if(![stock4Order.status isEqualToString:@"Listed"])
+        {
+            result=@"Mã chứng khoán ngừng giao dịch.";
+            return  result;
+        }
+        if([marketId isEqualToString:@"HA"])
+        {
+            //1: khop lenh lien tuc
+            //1.1 mua/ban chap nhan tat ca loai lenh(lo le phai nho hon 100, chi duoc dat loailenh LO)
+            //1.2 sua LO-Chua khop MTL(phan con lai chuyen thanh LO)-lo le
+            // truong hop sua lo le thi khong sua thanh lo chan
+            // MOK, MAK khong dc sua
+            
+            //1.3 huy
+            // chi huy dc LO-lole
+            
+            //2: khop lenh dinh ky
+            //1.1 mua/ban
+            //chi chap nhan LO+ATC
+            //1.2 sua
+            //chi dc sua LO
+            //1.3 huy
+            // chi huy dc 5 phut dau phien
+            
+            // gia dat theo gia khop lenh hien tai
+            //MOK: Khop het hoac huy het ngay khi lenh vao san
+            //MAK: Khop mot phan, phan con lai huy ngay khi lenh vao san
+            //MTL: khop het hoac khop 1 phan, phan con lai chuyen sang LO ngay khi vao san
+            
+            
+            
+            if([stock4Order.marketStatus isEqualToString:@""] || stock4Order.marketStatus == nil)//ngoai gio dat lenh
+            {
+                result=@"Ngoài giờ đặt lệnh";
+                return  result;
+            }
+            else if([stock4Order.marketStatus isEqualToString:@"LIS_CON_NML_1"])//lien tuc
+            {
+                if(!([orderType isEqualToString:@"L"]||[orderType isEqualToString:@"ATC"]) && ([orderSide isEqualToString:@"C"] || [orderSide isEqualToString:@"E"]))
+                {
+                    result=@"Chỉ được huỷ/sửa lệnh LO trong phiên khớp lệnh liên tục";
+                    return  result;
+                }
+            }
+            else if([stock4Order.marketStatus isEqualToString:@"LIS_AUC_C_NML_1"])//dinh ky 10 phut dau phien
+            {
+                if(!([orderType isEqualToString:@"ATC"] || [orderType isEqualToString:@"L"])&& ([orderSide isEqualToString:@"C"] || [orderSide isEqualToString:@"E"]))
+                {
+                    result=@"Quý khách chỉ được huỷ lệnh LO - ATC hoặc sửa lệnh LO trong phiên này.";
+                    return  result;
+                }
+                if(!([orderType isEqualToString:@"ATC"] || [orderType isEqualToString:@"L"]) && ([orderSide isEqualToString:@"B"] || [orderSide isEqualToString:@"S"]))
+                {
+                    result=@"Quý khách chỉ được phép đặt lệnh LO - ATC trong phiên này" ;
+                    return  result;
+                }
+            }
+            else if([stock4Order.marketStatus isEqualToString:@"LIS_AUC_C_NML_LOC_1"])//dinh ky 5 phut cuoi phien
+            {
+                if([orderSide isEqualToString:@"C"] || [orderSide isEqualToString:@"E"])
+                {
+                    result=@"Quý khách không được Huỷ/Sửa trong phiên này";
+                    return  result;
+                }
+                else if(!([orderType isEqualToString:@"ATC"] || [orderType isEqualToString:@"L"]) && ([orderSide isEqualToString:@"B"] || [orderSide isEqualToString:@"S"]))
+                {
+                    result=@"Quý khách chỉ được phép đặt lệnh LO - ATC trong phiên này" ;
+                    return  result;
+                }
+            }
+            else if([stock4Order.marketStatus isEqualToString:@"TP"])
+            {
+                result=@"Không được đặt lệnh trong thời gian nghỉ giữa phiên";
+                return  result;
+            }
+            else if([stock4Order.marketStatus isEqualToString:@"NONE_07"]|[stock4Order.marketStatus isEqualToString:@"NONE_97"]||[stock4Order.marketStatus isEqualToString:@"LIS_PTH_P_NML_13"]||[stock4Order.marketStatus isEqualToString:@"LIS_PTH_P_NML_1"])
+            {
+                result=@"Đặt lệnh không thành công. Đã hết giờ giao dịch, quý khách chỉ có thể đặt lệnh cho phiên giao dịch kế tiếp.";
+                return  result;
+            }
+        }
+    }
+        return result;
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+        return ex.description;
+    }
+}
+- (BOOL)sendOrder:(NSString*)orderType stockEntity:(VDSCPriceBoardEntity*)stockEntity params:(VDSCSystemParams*)params orderSide:(NSString*)orderSide price:(double)price qty:(double)qty amountWithFee:(double)amountWithFee isGtdOrder:(BOOL)isGtdOrder gtdDate:(NSString*)gtdDate otpView:(VDSCOTPView*)otpView
+{
+    @try{
+    if(!isGtdOrder){
+        NSString *checkMarketStatus = [self checkOrderMarket:orderType marketId:stockEntity.f_sanGD stockCode:stockEntity.f_maCK orderSide:orderSide];
+        if(checkMarketStatus.length>0)
+        {
+            [utils showMessage:checkMarketStatus messageContent:nil dismissAfter:3];
+            return NO;
+        }}
     VDSCStock4OrderEntity *stock4Order = [utils loadStockInfo:stockEntity.f_maCK marketId:stockEntity.f_sanGD orderSide:orderSide];
     if([self checkContrain:orderType stockEntity:stockEntity params:params orderSide:orderSide price:price qty:qty amountWithFee:amountWithFee isGtdOrder:isGtdOrder otpView:otpView stock4Order:stock4Order])
     {
@@ -248,7 +374,7 @@
                    , @"KW_ORDER_CODE",stockEntity.f_maCK
                    , @"KW_ORDER_PRICE", [NSString stringWithFormat:@"%f", price]
                    , @"KW_ORDER_QTY",[NSString stringWithFormat:@"%d", (int)orderQty]
-                   , @"KW_ORDER_TYPE", orderType
+                   , @"KW_ORDER_TYPE", orderTypeID
                    , @"KW_ORDER_GTD", isGtdOrder? gtdDate:@""
                    , @"KW_OTP_ROWIDX",[NSString stringWithFormat:@"%@",[arr_otp objectAtIndex:0]]
                    , @"KW_OTP_COLIDX",[NSString stringWithFormat:@"%@",[arr_otp objectAtIndex:1]]
@@ -268,7 +394,7 @@
             [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
             [request_cash setRequestMethod:@"POST"];
             [self grabURLInTheBackground:request_cash];
-            
+            [arr release];
         }
         /* if(i>0)
          {
@@ -285,6 +411,11 @@
          [allDataDictionary release];
          return NO;
          }*/
+    }
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
     return NO;
     
@@ -378,6 +509,9 @@
     [array setValue:@"Không đủ sức mua" forKey:@"ERRCODE_ORDER_ACCOUNT_CASH"];
     [array setValue:@"Không đủ chứng khoán" forKey:@"ERRCODE_ORDER_ACCOUNT_STOCK"];
     [array setValue:@"Ngoài giờ đặt lệnh" forKey:@"ERRCODE_ORDER_TIME4ORDER"];
+    [array setValue:@"Thao tác không sẵn sàng và lúc này. Vui lòng thử lại" forKey:@"HKSSC0004"];
+    [array setValue:@"Thao tác không sẵn sàng và lúc này. Vui lòng thử lại" forKey:@"ERRCODE_8888"];
+    [array setValue:@"Mật khẩu đã bị hết hạn. Quý khách vui lòng restart lại ứng dụng." forKey:@"ERRCODE_9999"];
     
     
 }

@@ -36,8 +36,7 @@
 {
     self = [super initWithStyle:style reuseIdentifier:@"VDSCCashTranferServicesCell"];
     if (self) {
-        NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCCashTranferServicesCell" owner:self options:nil];
-        self = [nibArray objectAtIndex:0];
+        
     }
     return self;
 }

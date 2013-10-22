@@ -16,6 +16,8 @@
 @property (strong, nonatomic) NSString *status;
 @property (strong, nonatomic) NSString *name;
 @property (strong, nonatomic) NSString *nameEN;
+@property (strong, nonatomic) NSString *marketId;
+@property (strong, nonatomic) NSString *marketStatus;
 @property (assign, nonatomic) double usable;
 @property (assign, nonatomic) double block;
 

@@ -26,20 +26,21 @@
 @synthesize f_ma;
 @synthesize f_mua3_gia;
 @synthesize f_mua3_kl;
+@synthesize popover;
 
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
 {
     self = [super initWithStyle:style reuseIdentifier:@"VDSCFullCellPrice"];
     if (self) {
-        NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCFullCellPrice" owner:self options:nil];
-        self = [nibArray objectAtIndex:0];
-        
+        //NSArray *nibArray = [[NSBundle mainBundle]loadNibNamed:@"VDSCFullCellPrice" owner:self options:nil];
+        //Bself = [nibArray objectAtIndex:0];
+        /*
         if([reuseIdentifier isEqual: @"VDSCFullCellPrice_1"])
             [self setBackgroundView:[nibArray objectAtIndex:1]];
         else
             [self setBackgroundView:[nibArray objectAtIndex:2]];
-        
+        */
         //[self sendSubviewToBack:self.backgroundView];
     }
     return self;
@@ -53,10 +54,10 @@
 {
     //NSLog(self.f_ma.text);
     [super setSelected:selected animated:animated];
-
+    
     
 }
-
+-(NSString*) reuseIdentifier{return @"VDSCFullCellPrice";}
 -(void) setCellValue:(VDSCPriceBoardEntity *) price
 {
     @try{
@@ -72,7 +73,7 @@
             
             if( [[price.f_mua1_gia  objectAtIndex:0] rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location == NSNotFound)
             {
-                double d = [[price.f_mua1_gia  objectAtIndex:0] doubleValue]/10;
+                double d = [[price.f_mua1_gia  objectAtIndex:0] doubleValue];
                 self.f_mua1_gia.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             }
             else {
@@ -83,7 +84,8 @@
             d = [[price.f_mua1_kl objectAtIndex:0] doubleValue]/10;
             self.f_mua1_kl.text=[NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             
-            self.f_kl_gia.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble: [[price.f_kl_gia  objectAtIndex:0] doubleValue]]]];            d = [[price.f_kl_kl objectAtIndex:0] doubleValue]/10;
+            self.f_kl_gia.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble: [[price.f_kl_gia  objectAtIndex:0] doubleValue]]]];
+            d = [[price.f_kl_kl objectAtIndex:0] doubleValue]/10;
             self.f_kl_kl.text=[NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             self.f_kl_tangGiam.text= [NSString stringWithFormat:@"%@",[price.f_kl_tangGiam objectAtIndex:0]];
             d = [[price.f_kl_tongkl objectAtIndex:0] doubleValue]/10;
@@ -91,7 +93,7 @@
             
             if( [[price.f_ban1_gia  objectAtIndex:0] rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location == NSNotFound)
             {
-                double d = [[price.f_ban1_gia  objectAtIndex:0] doubleValue]/10;
+                double d = [[price.f_ban1_gia  objectAtIndex:0] doubleValue];
                 self.f_ban1_gia.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
             }
             else {
@@ -146,18 +148,15 @@
             
         }
     }
-@catch (NSException *ex) {
-    NSLog([NSString stringWithFormat:@"full cell: %@",ex.description]);
-}
-
+    @catch (NSException *ex) {
+        NSLog([NSString stringWithFormat:@"full cell: %@",ex.description]);
+    }
+    
 }
 
 - (void)dealloc {
     [_cellData release];
     [f_ma release];
-    [_f_tran release];
-    [_f_san release];
-    [_f_thamChieu release];
     [f_mua3_gia release];
     [f_mua3_kl release];
     [_f_mua2_gia release];
@@ -174,24 +173,31 @@
     [_f_ban2_kl release];
     [_f_ban3_gia release];
     [_f_ban3_kl release];
-    //[nibArray release];
-    //[[self backgroundColor]release];
+    [utils release];
     [_f_nnMua release];
     [_f_nnBan release];
+    if(popover!=nil)
+       [popover release];
     [super dealloc];
 }
 - (IBAction)btn_showDetail:(id)sender {
-    
-        VDSCFullPriceBoard_PopoverViewController *popover_Vew = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"FullPriceBoard_Popover"];
-        //VDSCFullCellPrice *cell = (VDSCFullCellPrice *)[tableView cellForRowAtIndexPath:indexPath];
-        UIPopoverController *popover = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
-        popover.delegate = self.delegate;
-        popover_Vew.delegate = self.delegate;
-        CGRect rect=CGRectMake(((UIButton*)sender).bounds.origin.x+500, ((UIButton*)sender).bounds.origin.y+5, 50, 30);
-        popover_Vew.priceEntity = self.cellData;
-        [popover_Vew assignDataToControl];
-        popover_Vew.marketInfo = self.delegate;
+    @try{
+    VDSCFullPriceBoard_PopoverViewController *popover_Vew = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"FullPriceBoard_Popover"];
+    if(popover==nil)
+    popover = [[UIPopoverController alloc] initWithContentViewController:popover_Vew];
+    popover.delegate = self.delegate;
+    popover_Vew.delegate = ((VDSCMarketInfo*)self.delegate).delegate;
+    CGRect rect=CGRectMake(((UIButton*)sender).bounds.origin.x+500, ((UIButton*)sender).bounds.origin.y+5, 50, 30);
+    popover_Vew.stockEntity = self.cellData;
+    [popover_Vew assignDataToControl];
+    [popover_Vew loadChart];
+    popover_Vew.marketInfo = self.delegate;
+    popover_Vew.currentCell = self;
         [popover presentPopoverFromRect:rect inView:sender permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    }
+    @catch (NSException *ex) {
+        NSLog(ex.description);
+    }
     
 }
 @end

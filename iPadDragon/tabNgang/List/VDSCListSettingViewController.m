@@ -9,6 +9,7 @@
 #import "VDSCListSettingViewController.h"
 #import "VDSCCommonUtils.h"
 #import "VDSCListView.h"
+#import "ASIFormDataRequest.h"
 
 #define NUMBERS_ONLY @"1234567890"
 #define CHARACTER_LIMIT 3
@@ -17,6 +18,8 @@
 {
     VDSCCommonUtils *utils;
     BOOL dataChanging;
+    
+    NSOperationQueue *queue;
 }
 @end
 
@@ -138,18 +141,62 @@
                         , @"KW_AVGPRICE", self.txt_giaVon.text
                         , nil];
         NSString *post = [utils postValueBuilder:arr];
-        NSString *url = [[NSUserDefaults standardUserDefaults] stringForKey:@"updateCapitalPrice"];
-        NSDictionary *allDataDictionary = [utils getDataFromUrl:url method:@"POST" postData:post];
-        if([[allDataDictionary objectForKey:@"success"] boolValue])
-        {
-            //[utils showMessage:@"Cập nhật thành công" messageContent:nil];
-            [((VDSCListView*)self.delegate) loadData];
-            [((VDSCListView*)self.delegate).popover dismissPopoverAnimated:YES];
-        }
-        else[utils showMessage:@"Cập nhật không thành công" messageContent:nil];
+        NSString *urlStr = [[NSUserDefaults standardUserDefaults] stringForKey:@"updateCapitalPrice"];
+        NSURL *url = [NSURL URLWithString:urlStr];
+        ASIFormDataRequest *request_cash = [ASIFormDataRequest requestWithURL:url ];
+        request_cash.tag=100;
+        
+        [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
+        [request_cash setRequestMethod:@"POST"];
+        [self grabURLInTheBackground:request_cash];
         [arr release];
     }
 }
+- (IBAction)grabURLInTheBackground:(ASIFormDataRequest *)request
+{
+    if (!queue) {
+        [queue=[NSOperationQueue alloc] init];
+    }
+    
+    [request setDelegate:self];
+    [request setDidFinishSelector:@selector(requestDone:)];
+    [request setDidFailSelector:@selector(requestWentWrong:)];
+    [queue addOperation:request]; //queue is an NSOperationQueue
+}
+- (void)requestWentWrong:(ASIFormDataRequest *)request
+{
+    NSError *error = [request error];
+    NSLog(@"%@",error.description);
+}
+- (void)requestDone:(ASIFormDataRequest *)request
+{
+    NSDictionary *allDataDictionary;
+    @try{
+        NSData *data = [request responseData];
+        allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:0 error:nil] retain];
+        if([allDataDictionary isEqual:[NSNull null]])return;
+        if(request.tag==100)
+        {
+            bool success = [[allDataDictionary objectForKey:@"success"] boolValue];
+            if(success)
+            {
+                //[utils showMessage:@"Cập nhật thành công" messageContent:nil];
+                [((VDSCListView*)self.delegate) loadData];
+                [((VDSCListView*)self.delegate).popover dismissPopoverAnimated:YES];
+            }
+            else[utils showMessage:@"Cập nhật không thành công" messageContent:nil];
+        }
+    }
+        @catch (NSException *exception) {
+            NSLog(@"%@",exception.description);
+        }
+        @finally {
+            if(allDataDictionary!=nil)
+                [allDataDictionary release];
+            
+           
+        }
+    }
 
 -(BOOL) checkInputData
 {

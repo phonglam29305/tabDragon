@@ -58,6 +58,7 @@
         if(array.count>0)
             [self.table_accList reloadData];
     }
+    [arr release];
 }
 -(NSInteger) numberOfSectionsInTableView:(UITableView *)tableView
 {return 1;}
@@ -69,13 +70,12 @@
 }
 -(UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
+    NSDictionary *dic = [array objectAtIndex:indexPath.row];
     NSString *cellIndentifier = @"VDSCFullCellPrice";
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier: cellIndentifier];
-    if(cell == nil)
+    if(cell == nil){
         cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-    if(indexPath.row>array.count-1)
-        return cell;
-    NSDictionary *dic = [array objectAtIndex:indexPath.row];
+        [cell autorelease];
     //NSInteger i=indexPath.row;
     if(dic.count==0){return cell;}
     int x=5;
@@ -84,6 +84,7 @@
     label.text = [dic objectForKey:@"accountId"];
     label.backgroundColor = [UIColor clearColor];
     label.font = [UIFont fontWithName:@"arial" size:13];
+        label.tag=10;
     [cell addSubview:label];
     [label release];
     
@@ -93,6 +94,7 @@
     label.text = [dic objectForKey:@"bankName"];
     label.backgroundColor = [UIColor clearColor];
     label.font = [UIFont fontWithName:@"arial" size:13];
+        label.tag=11;
     [cell addSubview:label];
     [label release];
     
@@ -102,16 +104,21 @@
     label.text = [dic objectForKey:@"accountName"];
     label.backgroundColor = [UIColor clearColor];
     label.font = [UIFont fontWithName:@"arial" size:13];
+        label.tag=12;
     [cell addSubview:label];
     [label release];
     
-    /*label = [[UILabel alloc] init];
-     label.frame = CGRectMake(label.frame.origin.x+5, 0, 100, 24);
-     label.text = [dic objectForKey:@"accountId"];
-     label.backgroundColor = [UIColor clearColor];
-     label.font = [UIFont fontWithName:@"arial" size:15];
-     [cell addSubview:label];*/
-    
+    }
+    else{
+        UILabel *label = (UILabel*)[cell viewWithTag:10];
+        label.text = [dic objectForKey:@"accountId"];
+        
+        label = (UILabel*)[cell viewWithTag:11];
+        label.text = [dic objectForKey:@"bankName"];
+        
+        label = (UILabel*)[cell viewWithTag:12];
+        label.text = [dic objectForKey:@"accountName"];
+    }
     return  cell;
     
 }

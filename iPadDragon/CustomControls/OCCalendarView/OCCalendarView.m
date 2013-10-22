@@ -398,7 +398,7 @@
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     NSArray *dayTitles = [dateFormatter shortStandaloneWeekdaySymbols];
     NSArray *monthTitles = [dateFormatter standaloneMonthSymbols];
-	
+	[dateFormatter release];
     //// General Declarations
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGContextRef context = UIGraphicsGetCurrentContext();

@@ -8,12 +8,9 @@
 
 #import "VDSCOrderView.h"
 #import "HMSegmentedControl.h"
-#import "M13Checkbox.h"
 #import "OCCalendarViewController.h"
 #import <QuartzCore/QuartzCore.h>
-#import "CPPickerView.h"
 #import "VDSCCommonUtils.h"
-#import "TVPickerView.h"
 #import "VDSCMachedOrderView.h"
 #import "VDSCOrderHistoryView.h"
 #import "VDSCCertificateCodeView.h"
@@ -33,7 +30,6 @@
 #import "ASIFormDataRequest.h"
 #import "VDSCMainViewController.h"
 
-#define kProgramaticallyAddedTvPickerViewTag 10
 
 @interface VDSCOrderView()
 {
@@ -61,7 +57,6 @@
     VDSCSystemParams *params;
     
     
-    NSTimer *timer_order;
     
     VDSCOrderMatchPriceByTimeViewController *popover_orderMatchPriceByTime;
     VDSCPush2DateListViewController *popover_push2DateList;
@@ -70,6 +65,8 @@
     UIWebView *loading;
     VDSCOrderUtility *orderUtility;
     NSOperationQueue *queue;
+    
+    BOOL setPrice;
 }
 
 @end
@@ -77,6 +74,7 @@
 
 @synthesize segmentedControl;
 @synthesize otp;
+@synthesize timer_order;
 
 @synthesize popoverController;
 
@@ -100,45 +98,57 @@
 -(void) awakeFromNib
 {
     [super awakeFromNib];
-    utils = [[VDSCCommonUtils alloc] init];
-    orderUtility = [[VDSCOrderUtility alloc] init];
-    orderUtility.utils = utils;
-    orderUtility.delegate=self;
-    params = [[VDSCSystemParams alloc] init];
-    array_price = [[NSMutableArray alloc] init];
-    self.arrayGtdDate = [[NSMutableArray alloc] init];
-    array_order = [[NSMutableArray alloc] init];
-    array_stock = [[NSMutableArray alloc] init];
-    array_stockMargin = [[NSMutableArray alloc] init];
-    array_matchPriceByTime = [[NSMutableArray alloc] init];
-    self.table_todayOderList.delegate=self;
-    self.table_todayOderList.dataSource = self;
-    
-    otp = [[[NSBundle mainBundle] loadNibNamed:@"VDSCOTPView" owner:self options:nil] objectAtIndex:0];
-    otp.frame = CGRectMake(0, 0, 360, 30);
-    [self.otpView addSubview:otp];
-    
-    [[self orderTab] setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"bg-menu.png"]]];
-    [self.txt_ma addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
-    [self.txt_gia addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
-    [self.txt_khoiLuong addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
-    
-    [self.f_loaiLenh initSource:[NSArray arrayWithObjects:@"LO",@"ATO", @"ATC", @"MP", nil]];
-    [self registerForKeyboardNotifications];
-    self.txt_khoiLuong.delegate=self;
-    self.txt_ma.delegate=self;
-    self.txt_gia.delegate=self;
-    self.txt_tuNgay.delegate=self;
-    self.txt_denNgay.delegate=self;
-    self.txt_hieuLuc.delegate=self;
-    
-    [self initControls];
-    [self loadPriceBoard];
-    [self loadDateList];
-    loading = [utils showLoading:self.table_todayOderList];
-
-    timer_order  = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(loadRealTimeData) userInfo:nil repeats:YES];
-    [timer_order fire];
+    @try {
+        NSLog(@"%@", @"inti orderF");
+        utils = [[VDSCCommonUtils alloc] init];
+        orderUtility = [[VDSCOrderUtility alloc] init];
+        orderUtility.utils = utils;
+        orderUtility.delegate=self;
+        params = [[VDSCSystemParams alloc] init];
+        NSLog(@"OrderStatus: %d", params.orderStatusList.count);
+        NSLog(@"OrderType: %d", params.hnxOrderType.count);
+        array_price = [[NSMutableArray alloc] init];
+        self.arrayGtdDate = [[NSMutableArray alloc] init];
+        array_order = [[NSMutableArray alloc] init];
+        array_stock = [[NSMutableArray alloc] init];
+        array_stockMargin = [[NSMutableArray alloc] init];
+        array_matchPriceByTime = [[NSMutableArray alloc] init];
+        self.table_todayOderList.delegate=self;
+        self.table_todayOderList.dataSource = self;
+        
+        otp = [[[NSBundle mainBundle] loadNibNamed:@"VDSCOTPView" owner:self options:nil] objectAtIndex:0];
+        otp.frame = CGRectMake(0, 0, 360, 30);
+        [self.otpView addSubview:otp];
+        
+        [[self orderTab] setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"bg-menu.png"]]];
+        [self.txt_ma addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
+        [self.txt_gia addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
+        [self.txt_khoiLuong addTarget:self action:@selector(txt_ma_ValueChanged:) forControlEvents:UIControlEventEditingChanged];
+        
+        [self.f_loaiLenh initSource:[NSArray arrayWithObjects:@"LO",@"ATO", @"ATC", @"MP", nil]];
+        [self registerForKeyboardNotifications];
+        self.txt_khoiLuong.delegate=self;
+        self.txt_ma.delegate=self;
+        self.txt_gia.delegate=self;
+        self.txt_tuNgay.delegate=self;
+        self.txt_denNgay.delegate=self;
+        self.txt_hieuLuc.delegate=self;
+        
+        [self initControls];
+        [self loadPriceBoard];
+        [self loadDateList];
+        //loading = [utils showLoading:self.table_todayOderList];
+        //self.txt_ma.autocapitalizationType = UITextAutocapitalizationTypeWords;
+        
+        double interval = [[NSUserDefaults standardUserDefaults] doubleForKey:@"timeChangePriceboard"];
+        if(interval==0)interval=5;
+        timer_order  = [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(loadOrders) userInfo:nil repeats:YES];
+        [timer_order fire];
+        NSLog(@"%@", @"load order");
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) loadRealTimeData
 {
@@ -149,6 +159,7 @@
 
 -(void) loadPriceBoard
 {
+    @try{
     NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
     NSString *urlStr = [NSString stringWithFormat:@"%@",[user stringForKey:@"getAllStock"]];
     
@@ -161,10 +172,16 @@
     [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
     [request_cash setRequestMethod:@"POST"];
     [self grabURLInTheBackground:request_cash];
+        [arr release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 -(void) loadMarginStock
 {
+    @try{
     NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
     NSString *urlStr = [NSString stringWithFormat:@"%@",[user stringForKey:@"getMarginStock"]];
     
@@ -177,9 +194,15 @@
     [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
     [request_cash setRequestMethod:@"POST"];
     [self grabURLInTheBackground:request_cash];
+        [arr release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) LoadBalance
 {
+    @try{
     NSString *urlStr = [NSString stringWithFormat:@"%@",[[NSUserDefaults standardUserDefaults] stringForKey:@"clientCashInfo"]];
     
     NSArray *arr = [[NSArray alloc] initWithObjects:@"KW_CLIENTSECRET",utils.clientInfo.secret
@@ -194,9 +217,15 @@
     [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
     [request_cash setRequestMethod:@"POST"];
     [self grabURLInTheBackground:request_cash];
+        [arr release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void)loadDateList
 {
+    @try{
     NSArray *arr = [[NSArray alloc] initWithObjects:@"KW_CLIENTSECRET",utils.clientInfo.secret
                     , @"KW_CLIENTID", utils.clientInfo.clientID
                     , nil];
@@ -210,12 +239,18 @@
     [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
     [request_cash setRequestMethod:@"POST"];
     [self grabURLInTheBackground:request_cash];
-    
+    [arr release];
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 -(void)loadOrders
 {
-    
+    @try{
+        NSLog(@"%@", @"reload order");
     NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
     NSString *urlStr = [NSString stringWithFormat:@"%@",[user stringForKey:@"OrderTodayList"]];
     
@@ -229,17 +264,28 @@
     [request_cash addPostValue:[post substringFromIndex:5] forKey:@"info"];
     [request_cash setRequestMethod:@"POST"];
     [self grabURLInTheBackground:request_cash];
+        [arr release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 - (IBAction)grabURLInTheBackground:(ASIFormDataRequest *)request
 {
-    if (!queue) {
-        [queue=[NSOperationQueue alloc] init];
+    @try {
+        if (!queue) {
+            [queue=[NSOperationQueue alloc] init];
+            //[queue setShouldGroupAccessibilityChildren:NO];
+        }
+        
+        [request setDelegate:self];
+        [request setDidFinishSelector:@selector(requestDone:)];
+        [request setDidFailSelector:@selector(requestWentWrong:)];
+        [queue addOperation:request]; //queue is an NSOperationQueue
     }
-    
-    [request setDelegate:self];
-    [request setDidFinishSelector:@selector(requestDone:)];
-    [request setDidFailSelector:@selector(requestWentWrong:)];
-    [queue addOperation:request]; //queue is an NSOperationQueue
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 - (void)requestDone:(ASIFormDataRequest *)request
@@ -248,9 +294,10 @@
     @try{
         NSData *data = [request responseData];
         allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:0 error:nil] retain];
+        if([allDataDictionary isEqual:[NSNull null]] )return;
         if(request.tag==100)
         {
-            if([[allDataDictionary objectForKey:@"success"] boolValue])
+            if(![allDataDictionary isEqual:[NSNull null]] && [[allDataDictionary objectForKey:@"success"] boolValue])
             {
                 NSArray *data = [allDataDictionary objectForKey:@"list"];
                 if(![data isEqual:[NSNull null]])
@@ -299,6 +346,7 @@
                         [self.arrayGtdDate addObject:item];
                     }
                     self.txt_hieuLuc.text = [self.arrayGtdDate objectAtIndex:1];
+                    NSLog(@"%@", @"set ngay hieu luc");
                 }
             }
         }
@@ -306,10 +354,10 @@
         {
             if([[allDataDictionary objectForKey:@"success"] boolValue])
             {
-                [array_order removeAllObjects];
                 NSArray *data = [allDataDictionary objectForKey:@"list"];
                 if( ![data isEqual: [NSNull null]] )
                 {
+                    [array_order removeAllObjects];
                     
                     for (NSDictionary *arrayOfEntity in data)
                     {
@@ -334,10 +382,11 @@
                         [array_order addObject:price];
                         [price release];
                     }
-                    if(array_order!=nil && array_order.count>0)
-                    {
+                    //if(array_order!=nil && array_order.count>0)
+                    //{
                         [self.table_todayOderList reloadData];
-                    }
+                    //}
+                    NSLog(@"%@", @"finish order");
                 }
             }
         }
@@ -347,7 +396,7 @@
         }
     }
     @catch (NSException *exception) {
-        NSLog(exception.description);
+        NSLog(@"%@",exception.description);
     }
     @finally {
         if(allDataDictionary!=nil)
@@ -364,190 +413,273 @@
 - (void)requestWentWrong:(ASIFormDataRequest *)request
 {
     NSError *error = [request error];
-    NSLog(error.description);
+    NSLog(@"%@",error.description);
 }
 -(CGFloat) tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {return utils.rowHeight;}
 -(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return array_order.count ;
+    return [array_order retain].count ;
 }
 -(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {return 1;}
 -(UITableViewCell*)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    VDSCOrderEntity *order = [array_order objectAtIndex:indexPath.row];
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"cell"];
-    UIView *bgView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, utils.rowHeight)];
-    bgView.backgroundColor = [UIColor grayColor];
-    [cell setBackgroundView:bgView];
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"cell"];
+    //@try{
+        //if(array_order!=nil && array_order.count>=indexPath.row-1){
+        VDSCOrderEntity *order = [[array_order retain] objectAtIndex:indexPath.row];
+        UIColor *color = [UIColor greenColor];
+        if([order.side isEqualToString:@"S"]) color = [UIColor colorWithRed:212/255.0 green:10/255.0 blue:201/255.0 alpha:1];
+        if(cell==nil){
+            cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"cell"] autorelease];
+            UIView *bgView = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, utils.rowHeight)] autorelease];
+            bgView.backgroundColor = [UIColor grayColor];
+            [cell setBackgroundView:bgView];
+            
+            
+            UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 88, utils.rowHeight-1)];
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag = 10000;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            
+            UIButton *cancel = [UIButton buttonWithType:UIButtonTypeCustom];
+            cancel.frame = CGRectMake(10, 4, 20, 20);
+            [cancel setBackgroundImage:[UIImage imageNamed:@"btn-datlenh-cancel.png"] forState:UIControlStateNormal];
+            cancel.tag = 1000;
+            [cancel addTarget:self action:@selector(cancelOrder:) forControlEvents:UIControlEventTouchUpInside];
+            cancel.backgroundColor = [utils cellBackgroundColor];
+            [cancel setHidden:![order.isCancel isEqualToString:@"Y"]];
+            [cell addSubview:cancel];
+            [cancel release];
+            
+            UIButton *edit = [UIButton buttonWithType:UIButtonTypeCustom];
+            edit.frame = CGRectMake(50, 4, 20, 20);
+            [edit setBackgroundImage:[UIImage imageNamed:@"btn-datlenh-edit.png"] forState:UIControlStateNormal];
+            edit.tag = 2000;
+            [edit addTarget:self action:@selector(editOrder:) forControlEvents:UIControlEventTouchUpInside];
+            edit.backgroundColor = [utils cellBackgroundColor];
+            [edit setHidden:![order.isEdit isEqualToString:@"Y"]];
+            [cell addSubview:edit];
+            [edit release];
+            
+            
+            
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(89, 0, 76, utils.rowHeight-1)];
+            label.text = order.stockId;
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1300;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 87, utils.rowHeight-1)];
+            label.text = [order.side isEqual:@"B"]?@"Mua":@"Bán";
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1400;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 69, utils.rowHeight-1)];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.price]]];
+            label.textAlignment = NSTextAlignmentRight;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1500;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 71, utils.rowHeight-1)];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.qty]]];
+            label.textAlignment = NSTextAlignmentRight;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1600;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 94, utils.rowHeight-1)];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.wQty]]];
+            label.textAlignment = NSTextAlignmentRight;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1700;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            edit = [UIButton buttonWithType:UIButtonTypeCustom];
+            edit.frame = CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 80, utils.rowHeight-1);
+            edit.tag = 3000;
+            [edit setTitle:[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.avgMPrice]] forState:UIControlStateNormal];
+            [edit addTarget:self action:@selector(btn_showOrderMatchPriceByTime:) forControlEvents:UIControlEventTouchUpInside];
+            edit.titleLabel.textAlignment = NSTextAlignmentRight;
+            edit.backgroundColor = [utils cellBackgroundColor];
+            //[edit setValue:indexPath.row forUndefinedKey:indexPath.row];
+            [cell addSubview:edit];
+            [edit release];
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(edit.frame.size.width+ edit.frame.origin.x+1, 0, 94, utils.rowHeight-1)];
+            label.text = [params getOrderStatus:order.status langue:0];
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=1900;
+            [label setFont:[UIFont fontWithName:@"Arial" size:12.0f]];
+            [cell addSubview:label];
+            [label release];
+            
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 82, utils.rowHeight-1)];
+            label.text = [params getOrderType:order.marketId type: order.type];
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=2100;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 103, utils.rowHeight-1)];
+            label.text = order.gtd;
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=2200;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+            
+            
+            label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 128, utils.rowHeight-1)];
+            label.text = order.time;
+            label.textAlignment = NSTextAlignmentCenter;
+            label.backgroundColor = [utils cellBackgroundColor];
+            label.textColor = color;
+            label.tag=2300;
+            [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
+            [cell addSubview:label];
+            [label release];
+        }
+        else
+        {
+            UIView *cancel = (UIButton*)[cell viewWithTag:1000];
+            [cancel setHidden:![order.isCancel isEqualToString:@"Y"]];
+            
+            UIButton *edit = (UIButton*)[cell viewWithTag:2000];
+            [edit setHidden:![order.isEdit isEqualToString:@"Y"]];
+            
+            
+            
+            UILabel *label = (UILabel*)[cell viewWithTag:1300];
+            label.text = order.stockId;
+            label.textColor = color;
+            
+            label = (UILabel*)[cell viewWithTag:1400];
+            label.text = [order.side isEqual:@"B"]?@"Mua":@"Bán";
+            label.textColor = color;
+            
+            
+            label = (UILabel*)[cell viewWithTag:1500];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.price]]];
+            label.textColor = color;
+            
+            
+            label = (UILabel*)[cell viewWithTag:1600];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.qty]]];
+            label.textColor = color;
+            
+            label = (UILabel*)[cell viewWithTag:1700];
+            label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.wQty]]];
+            label.textColor = color;
+            
+            edit = (UIButton*)[cell viewWithTag:3000];
+            [edit setTitle:[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.avgMPrice]] forState:UIControlStateNormal];
+            
+            label = (UILabel*)[cell viewWithTag:1900];
+            label.text = [params getOrderStatus:order.status langue:0];
+            label.textColor = color;
+            
+            
+            label = (UILabel*)[cell viewWithTag:2100];
+            label.text = [params getOrderType:order.marketId type: order.type];
+            label.textColor = color;
+            
+            label = (UILabel*)[cell viewWithTag:2200];
+            label.text = order.gtd;
+            label.textColor = color;
+            
+            
+            label = (UILabel*)[cell viewWithTag:2300];
+            label.text = order.time;
+            label.textColor = color;
+        }
+    //}@catch (NSException *ex) {
+    //    NSLog([ex description]);
+    //}
     
-    UIColor *color = [UIColor greenColor];
-    if([order.side isEqualToString:@"S"]) color = [UIColor colorWithRed:212/255.0 green:10/255.0 blue:201/255.0 alpha:1];
-    
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 88, utils.rowHeight-1)];
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    if([order.isCancel isEqualToString:@"Y"])
-    {
-        UIButton *cancel = [UIButton buttonWithType:UIButtonTypeCustom];
-        cancel.frame = CGRectMake(10, 3, 24, 24);
-        [cancel setBackgroundImage:[UIImage imageNamed:@"btn-datlenh-cancel.png"] forState:UIControlStateNormal];
-        cancel.tag = indexPath.row;
-        [cancel addTarget:self action:@selector(cancelOrder:) forControlEvents:UIControlEventTouchUpInside];
-        cancel.backgroundColor = [utils cellBackgroundColor];
-        [cell addSubview:cancel];
-        [cancel release];
-    }
-    if([order.isEdit isEqualToString:@"Y"])
-    {
-        UIButton *edit = [UIButton buttonWithType:UIButtonTypeCustom];
-        edit.frame = CGRectMake(50, 3, 24, 24);
-        [edit setBackgroundImage:[UIImage imageNamed:@"btn-datlenh-edit.png"] forState:UIControlStateNormal];
-        edit.tag = indexPath.row;
-        [edit addTarget:self action:@selector(editOrder:) forControlEvents:UIControlEventTouchUpInside];
-        edit.backgroundColor = [utils cellBackgroundColor];
-        [cell addSubview:edit];
-        
-        [edit release];
-    }
-    
-    
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(89, 0, 76, utils.rowHeight-1)];
-    label.text = order.stockId;
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 87, utils.rowHeight-1)];
-    label.text = [order.side isEqual:@"B"]?@"Mua":@"Bán";
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 69, utils.rowHeight-1)];
-    label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.price]]];
-    label.textAlignment = NSTextAlignmentRight;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 71, utils.rowHeight-1)];
-    label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.qty]]];
-    label.textAlignment = NSTextAlignmentRight;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 94, utils.rowHeight-1)];
-    label.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.wQty]]];
-    label.textAlignment = NSTextAlignmentRight;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    UIButton *edit = [UIButton buttonWithType:UIButtonTypeCustom];
-    edit.frame = CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 80, utils.rowHeight-1);
-    //[edit setBackgroundImage:[UIImage imageNamed:@"btn_edit_icon.png"] forState:UIControlStateNormal];
-    edit.tag = indexPath.row;
-    [edit setTitle:[NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: order.avgMPrice]]] forState:UIButtonTypeCustom];
-    [edit addTarget:self action:@selector(btn_showOrderMatchPriceByTime:) forControlEvents:UIControlEventTouchUpInside];
-    edit.titleLabel.textAlignment = NSTextAlignmentRight;
-    edit.backgroundColor = [utils cellBackgroundColor];
-    [cell addSubview:edit];
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(edit.frame.size.width+ edit.frame.origin.x+1, 0, 94, utils.rowHeight-1)];
-    label.text = [params getOrderStatus:order.status langue:0];
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:@"Arial" size:12.0f]];
-    [cell addSubview:label];
-    [label release];
-    
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 82, utils.rowHeight-1)];
-    label.text = [params getOrderType:order.marketId type: order.type];
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 103, utils.rowHeight-1)];
-    label.text = order.gtd;
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
-    
-    label = [[UILabel alloc] initWithFrame:CGRectMake(label.frame.size.width+ label.frame.origin.x+1, 0, 128, utils.rowHeight-1)];
-    label.text = order.time;
-    label.textAlignment = NSTextAlignmentCenter;
-    label.backgroundColor = [utils cellBackgroundColor];
-    label.textColor = color;
-    [label setFont:[UIFont fontWithName:utils.fontFamily size:utils.fontSize]];
-    [cell addSubview:label];
-    [label release];
-    
+    cell.tag = indexPath.row;
     return cell;
+    //}
+    //else return [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"cell"];
 }
 -(IBAction)cancelOrder:(id)sender
 {
+    @try{
     UIButton *cancel = (UIButton*)sender;
-    VDSCOrderEntity *order = [array_order objectAtIndex:cancel.tag];
+    UITableViewCell *cell = (UITableViewCell*)[[cancel superview] superview];
+        if([cell isKindOfClass:[UITableView class]])cell = (UITableViewCell*)[cancel superview] ;
+    VDSCOrderEntity *order = [[array_order retain] objectAtIndex:cell.tag];
     if(![order isEqual:[NSNull null]])
     {
-        UITableViewCell *cell = [self.table_todayOderList cellForRowAtIndexPath:[NSIndexPath indexPathForRow:cancel.tag inSection:0]];
-        VDSCEditOrderViewController *editOrderController = [[self.delegate storyboard]instantiateViewControllerWithIdentifier:@"EditOrderView"];
+        VDSCEditOrderViewController *editOrderController = [[self.superview.window.rootViewController storyboard]instantiateViewControllerWithIdentifier:@"EditOrderView"];
         editOrderController.orderEntity = order;
         editOrderController.orderSide=@"C";
         editOrderController.params = params;
         [editOrderController setModalPresentationStyle:UIModalPresentationFormSheet];
         [editOrderController setModalTransitionStyle:UIModalTransitionStyleFlipHorizontal];
-        //[self.delegate presentModalViewController:editOrderController animated:YES];
         editOrderController.delegate=self;
-        //editOrderController.view.frame = CGRectMake(90, 140, 370, 320);
-        
+        if(popoverController!=nil){[popoverController release];popoverController = nil;}
         popoverController = [[UIPopoverController alloc] initWithContentViewController:editOrderController];
         [popoverController presentPopoverFromRect:((UIButton*)sender).frame inView:cell permittedArrowDirections:UIPopoverArrowDirectionLeft animated:YES];
-        //[self performSelectorInBackground:@selector(loadOrders) withObject:nil];
-        //[self.otpView setHidden:[[[NSUserDefaults standardUserDefaults] objectForKey:@"saveOTP"] boolValue]];
+        
+    }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 -(IBAction)editOrder:(id)sender
 {
+    @try{
     UIButton *cancel = (UIButton*)sender;
-    VDSCOrderEntity *order = [array_order objectAtIndex:cancel.tag];
+        UITableViewCell *cell = (UITableViewCell*)[[cancel superview]superview];
+        if([cell isKindOfClass:[UITableView class]])cell = (UITableViewCell*)[cancel superview] ;
+    VDSCOrderEntity *order = [[array_order retain] objectAtIndex:cell.tag];
     if(![order isEqual:[NSNull null]])
     {
+        if([order.marketId isEqualToString:@"HA"] && [order.type isEqualToString:@"C"])
+        {
+            [utils showMessage:@"Lệnh ATC không được sửa." messageContent:nil dismissAfter:3];
+            return;
+        }
         
-        UITableViewCell *cell = [self.table_todayOderList cellForRowAtIndexPath:[NSIndexPath indexPathForRow:cancel.tag inSection:0]];
-        VDSCEditOrderViewController *editOrderController = [[self.delegate storyboard]instantiateViewControllerWithIdentifier:@"EditOrderView"];
+        VDSCEditOrderViewController *editOrderController = [[self.superview.window.rootViewController storyboard]instantiateViewControllerWithIdentifier:@"EditOrderView"];
         editOrderController.orderEntity = order;
         editOrderController.orderSide=@"E";
         editOrderController.params = params;
@@ -556,15 +688,21 @@
         //[self.delegate presentModalViewController:editOrderController animated:YES];
         //editOrderController.view.frame = CGRectMake(90, 140, 370, 320);
         editOrderController.delegate=self;
+        
+        if(popoverController!=nil){[popoverController release];popoverController = nil;}
         popoverController = [[UIPopoverController alloc] initWithContentViewController:editOrderController];
         [popoverController presentPopoverFromRect:((UIButton*)sender).frame inView:cell permittedArrowDirections:UIPopoverArrowDirectionLeft animated:YES];
         //[self performSelectorInBackground:@selector(loadOrders) withObject:nil];
         //[self.otpView setHidden:[[[NSUserDefaults standardUserDefaults] objectForKey:@"saveOTP"] boolValue]];
     }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) initControls
 {
-    //tab
+    @try{
     segmentedControl = [[HMSegmentedControl alloc] initWithSectionTitles:@[@"    Lệnh     ", @"Lịch sử đặt lệnh", @"Lịch sử khớp lệnh", @"Xác nhận thẻ"]];
     [segmentedControl setFrame:CGRectMake(0, 0, 560, 30)];
     [segmentedControl addTarget:self action:@selector(segmentedControlChangedValue:) forControlEvents:UIControlEventValueChanged];
@@ -583,7 +721,11 @@
                                           style:style
                                         checked:checked];
     [self.f_datLenh addSubview:cbv];
-    self.f_loaiLenh.delegate = self;
+        self.f_loaiLenh.delegate = self;
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
     
 }
 - (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation {
@@ -591,6 +733,7 @@
 }
 
 - (void)segmentedControlChangedValue:(HMSegmentedControl *)segmentedControl {
+    @try{
     CGFloat width = self.frame.size.width;
     CGFloat height = self.frame.size.height;
     switch (segmentedControl.selectedIndex) {
@@ -657,17 +800,26 @@
                 [self sendSubviewToBack: certificateCodeView];
             break;
     }
-	
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 
 - (IBAction)btn_hieuLuc_touch:(id)sender {
-    
+    @try{
     popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
     if(popoverController!=nil){[popoverController release];popoverController = nil;}
     popover_push2DateList.delegate=self;
     popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
     CGRect rect=CGRectMake(((UIButton*)sender).frame.origin.x, ((UIButton*)sender).frame.origin.y+35, 50, 30);
     [popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 - (void) willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration{
     [[NSNotificationCenter defaultCenter] postNotificationName:UIKeyboardCoViewWillRotateNotification object:nil];
@@ -680,9 +832,6 @@
 
 
 #pragma mark - IBActions
-- (IBAction)backgroundTouchDown:(id)sender {
-    [self.txt_denNgay resignFirstResponder];
-}
 
 
 #pragma mark - UI Keyboard Co View Delegate
@@ -722,80 +871,114 @@
 }
 -(void) connectionDidFinishLoading:(NSURLConnection *)connection
 {
+    @try{
     NSDictionary* allData = [[NSJSONSerialization JSONObjectWithData:webData_stock options:0 error:nil] retain];
+        if([allData isEqual:[NSNull null]])return;
     NSArray* arrayOfEntity = [allData objectForKey:@"stock"];
-    if([arrayOfEntity isEqual:[NSNull null]])return;
-    stockEntity = [[VDSCPriceBoardEntity alloc] init];
-    stockEntity.f_tenCty = [allData objectForKey:@"name"];
-    stockEntity.f_ma = [arrayOfEntity objectAtIndex:0];
-    stockEntity.f_maCK = [stockEntity.f_ma objectAtIndex:0];
-    stockEntity.f_tran = [arrayOfEntity objectAtIndex:2];
-    stockEntity.f_san = [arrayOfEntity objectAtIndex:3];
-    stockEntity.f_thamchieu = [arrayOfEntity objectAtIndex:1];
-    
-    stockEntity.f_mua4_kl = [arrayOfEntity objectAtIndex:4];
-    stockEntity.f_mua3_gia = [arrayOfEntity objectAtIndex:5];
-    stockEntity.f_mua3_kl = [arrayOfEntity objectAtIndex:6];
-    stockEntity.f_mua2_gia = [arrayOfEntity objectAtIndex:7];
-    stockEntity.f_mua2_kl = [arrayOfEntity objectAtIndex:8];
-    stockEntity.f_mua1_gia = [arrayOfEntity objectAtIndex:9];
-    stockEntity.f_mua1_kl = [arrayOfEntity objectAtIndex:10];
-    
-    stockEntity.f_kl_gia = [arrayOfEntity objectAtIndex:11];
-    stockEntity.f_kl_kl = [arrayOfEntity objectAtIndex:12];
-    stockEntity.f_kl_tangGiam = [arrayOfEntity objectAtIndex:13];
-    stockEntity.f_kl_tongkl = [arrayOfEntity objectAtIndex:14];
-    
-    stockEntity.f_ban1_gia = [arrayOfEntity objectAtIndex:15];
-    stockEntity.f_ban1_kl = [arrayOfEntity objectAtIndex:16];
-    stockEntity.f_ban2_gia = [arrayOfEntity objectAtIndex:17];
-    stockEntity.f_ban2_kl = [arrayOfEntity objectAtIndex:18];
-    stockEntity.f_ban3_gia = [arrayOfEntity objectAtIndex:19];
-    stockEntity.f_ban3_kl = [arrayOfEntity objectAtIndex:20];
-    stockEntity.f_ban4_kl = [arrayOfEntity objectAtIndex:21];
-    
-    stockEntity.f_moCua = [arrayOfEntity objectAtIndex:22];
-    stockEntity.f_cao = [arrayOfEntity objectAtIndex:23];
-    stockEntity.f_thap = [arrayOfEntity objectAtIndex:24];
-    stockEntity.f_trungBinh = [arrayOfEntity objectAtIndex:25];
-    
-    [self setCellValue:stockEntity];
-    self.f_tiLeVay.text =@"0";
-    for(NSArray *stock in array_stockMargin)
-    {
-        if([stockEntity.f_maCK isEqualToString:[stock objectAtIndex:0]])
-            self.f_tiLeVay.text = [NSString stringWithFormat:@"%@",[stock objectAtIndex:1]];
-    }
-    
-    for(VDSCPriceBoardEntity *stock in array_price)
-    {
-        if([stock.f_maCK isEqual: [stockEntity.f_ma objectAtIndex:0]])
+    if(![arrayOfEntity isEqual:[NSNull null]]){
+        stockEntity = [[VDSCPriceBoardEntity alloc] init];
+        stockEntity.f_tenCty = [allData objectForKey:@"name"];
+        stockEntity.f_ma = [arrayOfEntity objectAtIndex:0];
+        stockEntity.f_maCK = [stockEntity.f_ma objectAtIndex:0];
+        stockEntity.f_tran = [arrayOfEntity objectAtIndex:2];
+        stockEntity.f_san = [arrayOfEntity objectAtIndex:3];
+        stockEntity.f_thamchieu = [arrayOfEntity objectAtIndex:1];
+        
+        stockEntity.f_mua4_kl = [arrayOfEntity objectAtIndex:4];
+        stockEntity.f_mua3_gia = [arrayOfEntity objectAtIndex:5];
+        stockEntity.f_mua3_kl = [arrayOfEntity objectAtIndex:6];
+        stockEntity.f_mua2_gia = [arrayOfEntity objectAtIndex:7];
+        stockEntity.f_mua2_kl = [arrayOfEntity objectAtIndex:8];
+        stockEntity.f_mua1_gia = [arrayOfEntity objectAtIndex:9];
+        stockEntity.f_mua1_kl = [arrayOfEntity objectAtIndex:10];
+        
+        stockEntity.f_kl_gia = [arrayOfEntity objectAtIndex:11];
+        stockEntity.f_kl_kl = [arrayOfEntity objectAtIndex:12];
+        stockEntity.f_kl_tangGiam = [arrayOfEntity objectAtIndex:13];
+        stockEntity.f_kl_tongkl = [arrayOfEntity objectAtIndex:14];
+        
+        stockEntity.f_ban1_gia = [arrayOfEntity objectAtIndex:15];
+        stockEntity.f_ban1_kl = [arrayOfEntity objectAtIndex:16];
+        stockEntity.f_ban2_gia = [arrayOfEntity objectAtIndex:17];
+        stockEntity.f_ban2_kl = [arrayOfEntity objectAtIndex:18];
+        stockEntity.f_ban3_gia = [arrayOfEntity objectAtIndex:19];
+        stockEntity.f_ban3_kl = [arrayOfEntity objectAtIndex:20];
+        stockEntity.f_ban4_kl = [arrayOfEntity objectAtIndex:21];
+        
+        stockEntity.f_moCua = [arrayOfEntity objectAtIndex:22];
+        stockEntity.f_cao = [arrayOfEntity objectAtIndex:23];
+        stockEntity.f_thap = [arrayOfEntity objectAtIndex:24];
+        stockEntity.f_trungBinh = [arrayOfEntity objectAtIndex:25];
+        
+        [self setCellValue:stockEntity];
+        self.f_tiLeVay.text =@"0";
+        for(NSArray *stock in array_stockMargin)
         {
-            stockEntity.f_maCK = stock.f_maCK;
-            stockEntity.f_sanGD = stock.f_sanGD;
-            self.f_soDuCK.text = @"0";
-            VDSCStock4OrderEntity *stock4Order = [utils loadStockInfo:stock.f_maCK marketId:stock.f_sanGD orderSide:self.btn_sideOrder.tag==0?@"B":@"S"];
-            
-            if(self.btn_sideOrder.tag==1)
-                self.f_soDuCK.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: stock4Order.usable]];
-            else
-                self.f_sucMua.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: stock4Order.usable]];
+            if([stockEntity.f_maCK isEqualToString:[stock objectAtIndex:0]])
+                self.f_tiLeVay.text = [NSString stringWithFormat:@"%@",[stock objectAtIndex:1]];
         }
         
-    }
-    
-    [array_matchPriceByTime removeAllObjects];
-    NSArray *array = [allData objectForKey:@"timing"];
-    if(![array isEqual:[NSNull null]])
-        for(int i=array.count-1; i>=0;i--)
+        for(VDSCPriceBoardEntity *stock in array_price)
         {
-            [array_matchPriceByTime addObject:[array objectAtIndex:i]];
+            if([stock.f_maCK isEqual: [stockEntity.f_ma objectAtIndex:0]])
+            {
+                stockEntity.f_maCK = stock.f_maCK;
+                stockEntity.f_sanGD = stock.f_sanGD;
+                self.f_soDuCK.text = @"0";
+                VDSCStock4OrderEntity *stock4Order = [utils loadStockInfo:stock.f_maCK marketId:stock.f_sanGD orderSide:self.btn_sideOrder.tag==0?@"B":@"S"];
+                
+                if(self.btn_sideOrder.tag==1)
+                    self.f_soDuCK.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: stock4Order.usable]];
+                else
+                    self.f_sucMua.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: stock4Order.usable]];
+                if([[self.f_loaiLenh getOrderType] isEqualToString:@"ATO"]||[[self.f_loaiLenh getOrderType] isEqualToString:@"MOK"]||[[self.f_loaiLenh getOrderType] isEqualToString:@"MAK"]||[[self.f_loaiLenh getOrderType] isEqualToString:@"MTL"]||[[self.f_loaiLenh getOrderType] isEqualToString:@"ATC"])
+                {
+                    double kl=stock4Order.ceiling;
+                    if(self.btn_sideOrder.tag!=0)kl=stock4Order.floor;
+                    self.txt_gia.text = [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:kl]];
+                }
+                [self resetOrderType: stock4Order];
+            }
+            
         }
-    [self touchesBegan:0 withEvent:nil];
+        
+        [array_matchPriceByTime removeAllObjects];
+        NSArray *array = [allData objectForKey:@"timing"];
+        if(![array isEqual:[NSNull null]])
+            for(int i=array.count-1; i>=0;i--)
+            {
+                [array_matchPriceByTime addObject:[array objectAtIndex:i]];
+            }
+        
+        [self touchesBegan:0 withEvent:nil];
+    }
     [connection release];
+        [allData release];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
+}
+-(void) resetOrderType: (VDSCStock4OrderEntity*)stock4Order
+{
+    @try{
+    if([stock4Order.marketId isEqualToString:@"HO"])
+    {
+        [self.f_loaiLenh initSourceOrderType:params.hsxOrderType];
+    }
+    else if([stock4Order.marketId isEqualToString:@"HA"])
+    {
+        [self.f_loaiLenh initSourceOrderType:params.hnxOrderType];}
+    else{
+        [self.f_loaiLenh initSourceOrderType:params.upcomOrderType];}
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
+    @try{
     [self.txt_ma resignFirstResponder];
     [self.txt_gia resignFirstResponder];
     [self.txt_khoiLuong resignFirstResponder];
@@ -810,24 +993,33 @@
     double kl=[[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
     self.txt_khoiLuong.text = [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:kl]];
     kl=[[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-    self.txt_gia.text = [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:kl]];
+        self.txt_gia.text = [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:kl]];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) loadStockInfo
 {
+    @try{
     stockEntity = nil;
     NSString *code = self.txt_ma.text;
     NSString *temp=[[NSUserDefaults standardUserDefaults] stringForKey:@"stock_fullInfo"];
     NSString *urlStr= [NSString stringWithFormat:temp, code];
     
     NSURL *url = [NSURL URLWithString:urlStr];
-    NSURLRequest *request = [[NSURLRequest alloc] initWithURL:url];
+    NSURLRequest *request = [[[NSURLRequest alloc] initWithURL:url] autorelease];
     connection_stock = [[NSURLConnection alloc] initWithRequest:request delegate:self];
     
     if(connection_stock)
     {
         webData_stock = [[NSMutableData alloc] init];
     }
-    
+        
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
     
 }
 -(void) setCellValue:(VDSCPriceBoardEntity *) price
@@ -936,145 +1128,170 @@
         }
     }
     @catch (NSException *ex) {
-        //NSLog(ex.description);
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 - (IBAction)txt_ma_ValueChanged:(id)sender {
-    
-    if(sender == self.txt_ma)
-    {
-        stockEntity=nil;
-        if(array_price!=nil && array_price.count>0)
+    @try{
+        if(sender == self.txt_ma)
         {
-            NSString *code = self.txt_ma.text;
-            
-            NSMutableArray *array = [[NSMutableArray alloc] init];
-            
-            for(VDSCPriceBoardEntity *entity in array_price)
+            stockEntity=nil;
+            if(array_price!=nil && array_price.count>0)
             {
-                NSString *stock =entity.f_maCK;
-                if([stock rangeOfString:code].location != NSNotFound)
+                NSString *code = self.txt_ma.text;
+                
+                NSMutableArray *array = [[NSMutableArray alloc] init];
+                
+                for(VDSCPriceBoardEntity *entity in array_price)
                 {
-                    [array addObject:stock];
+                    NSString *stock =entity.f_maCK;
+                    if([stock rangeOfString:[code uppercaseString] ].location != NSNotFound)
+                    {
+                        [array addObject:stock];
+                    }
                 }
+                for(UIView *view in self.scroll_keycorrect.subviews)
+                    [view removeFromSuperview];
+                int with=0;
+                for(NSString *stock in array)
+                {
+                    UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+                    [label setTitle: stock forState:UIControlStateNormal ] ;
+                    label.frame = CGRectMake(43+70*with+2*with, 5, 70, 25);
+                    [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
+                    label.tag=0;
+                    [label setBackgroundColor:[UIColor darkGrayColor]];
+                    [self.scroll_keycorrect addSubview:label];
+                    //[label release];
+                    with +=1;
+                }
+                [self.scroll_keycorrect setContentSize:CGSizeMake((43+70*with+2*with)+70, self.scroll_keycorrect.frame.size.height)];
+                if(self.txt_ma.text.length >=3)
+                    [self loadStockInfo];
+                
+                [self tinhTong];
             }
-            for(UIView *view in self.scroll_keycorrect.subviews)
-                [view removeFromSuperview];
-            int with=0;
-            for(NSString *stock in array)
-            {
-                UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-                [label setTitle: stock forState:UIControlStateNormal ] ;
-                label.frame = CGRectMake(43+70*with+2*with, 5, 70, 25);
-                [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
-                label.tag=0;
-                [label setBackgroundColor:[UIColor darkGrayColor]];
-                [self.scroll_keycorrect addSubview:label];
-                //[label release];
-                with +=1;
+            else{
+                [self loadPriceBoard];
             }
-            [self.scroll_keycorrect setContentSize:CGSizeMake((43+70*with+2*with)+70, self.scroll_keycorrect.frame.size.height)];
-            if(self.txt_ma.text.length >=3)
-                [self loadStockInfo];
-            
-            [self tinhTong];
+        }
+        else{
+            if(!setPrice)
+                [self tinhTong];
         }
     }
-    else{
-                [self tinhTong];
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 - (IBAction)stock_touchInside:(id)sender {
-    //text ma chung khoan
-    if(((UIButton*)sender).tag==0)
-    {
-        self.txt_ma.text = ((UIButton*)sender).titleLabel.text;
-        [self.txt_ma resignFirstResponder];
-    }
-    //khoi luong
-    else if(((UIButton*)sender).tag==1)
-    {
-        UIButton *btn = sender;
-        double qty = [[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-        if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"+"])
+    @try{
+        //text ma chung khoan
+        if(((UIButton*)sender).tag==0)
         {
-            double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-            qty += value;
+            self.txt_ma.text = ((UIButton*)sender).titleLabel.text;
+            [self.txt_ma resignFirstResponder];
+            [self txt_ma_ValueChanged:self.txt_ma];
         }
-        else if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"-"])
+        //khoi luong
+        else if(((UIButton*)sender).tag==1)
         {
-            double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-            qty -= value;
-            if(qty<0)
-                qty=0;
-        }
-        self.txt_khoiLuong.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble: qty]]];
-        
-        
-    }
-    //gia
-    else if(((UIButton*)sender).tag==2)
-    {
-        UIButton *btn = sender;
-        if([btn.titleLabel.text isEqualToString:@"Trần"])
-        {
-            self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_tran objectAtIndex:0] doubleValue]]]];
-        }
-        else
-            if([btn.titleLabel.text isEqualToString:@"Sàn"])
+            UIButton *btn = sender;
+            double qty = [[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+            if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"+"])
             {
-                self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_san objectAtIndex:0] doubleValue]]]];
+                double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+                qty += value;
+            }
+            else if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"-"])
+            {
+                double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+                qty -= value;
+                if(qty<0)
+                    qty=0;
+            }
+            self.txt_khoiLuong.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble: qty]]];
+            
+            
+        }
+        //gia
+        else if(((UIButton*)sender).tag==2)
+        {
+            UIButton *btn = sender;
+            if([btn.titleLabel.text isEqualToString:@"Trần"])
+            {
+                self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_tran objectAtIndex:0] doubleValue]]]];
             }
             else
-                if([btn.titleLabel.text isEqualToString:@"Tham chiếu"])
+                if([btn.titleLabel.text isEqualToString:@"Sàn"])
                 {
-                    self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_thamchieu objectAtIndex:0] doubleValue]]]];
+                    self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_san objectAtIndex:0] doubleValue]]]];
                 }
                 else
-                {
-                    double qty = [[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-                    if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"+"])
+                    if([btn.titleLabel.text isEqualToString:@"Tham chiếu"])
                     {
-                        double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-                        qty += value;
+                        self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:[[stockEntity.f_thamchieu objectAtIndex:0] doubleValue]]]];
                     }
-                    else if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"-"])
+                    else
                     {
-                        double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-                        qty -= value;
-                        if(qty<0)
-                            qty=0;
+                        double qty = [[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+                        if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"+"])
+                        {
+                            double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+                            qty += value;
+                        }
+                        else if([[btn.titleLabel.text substringWithRange:NSMakeRange(0, 1)] isEqualToString:@"-"])
+                        {
+                            double value = [[[btn.titleLabel.text substringWithRange:NSMakeRange(1, [btn.titleLabel.text length]-1)] stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+                            qty -= value;
+                            if(qty<0)
+                                qty=0;
+                        }
+                        self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: qty]]];
+                        
                     }
-                    self.txt_gia.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: qty]]];
-                    
-                }
+        }
+        [self tinhTong];
     }
-    [self tinhTong];
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void) tinhTong
 {
-    NSString *orderType=[[self.f_loaiLenh getOrderType] isEqualToString:@"ATO"]?@"O":
-    [[self.f_loaiLenh getOrderType] isEqualToString:@"ATC"]?@"C":
-    [[self.f_loaiLenh getOrderType] isEqualToString:@"LO"]?@"L":@"M";
-    if(![orderType isEqualToString:@"L"])
-    {
-        if(stockEntity==nil)
-        {self.txt_gia.text=@"0";}
-        else
-            if(self.btn_sideOrder.tag==0)
-                self.txt_gia.text= [NSString stringWithFormat:@"%@",[stockEntity.f_tran objectAtIndex:0]];
+    @try {
+        NSString *orderType=[[self.f_loaiLenh getOrderType] isEqualToString:@"ATO"]?@"O":
+        [[self.f_loaiLenh getOrderType] isEqualToString:@"ATC"]?@"C":
+        [[self.f_loaiLenh getOrderType] isEqualToString:@"LO"]?@"L":@"M";
+        if(![orderType isEqualToString:@"L"])
+        {
+            setPrice=YES;
+            if(stockEntity==nil)
+            {self.txt_gia.text=@"0";}
             else
-                self.txt_gia.text= [NSString stringWithFormat:@"%@",[stockEntity.f_san objectAtIndex:0]];
+                if(self.btn_sideOrder.tag==0)
+                    self.txt_gia.text= [NSString stringWithFormat:@"%@",[stockEntity.f_tran objectAtIndex:0]];
+                else
+                    self.txt_gia.text= [NSString stringWithFormat:@"%@",[stockEntity.f_san objectAtIndex:0]];
+            setPrice = NO;
+        }
+        
+        double kl= [[[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:[[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@""] doubleValue]]]stringByReplacingOccurrencesOfString:@"," withString:@""] doubleValue];
+        double gia=[[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
+        double phi=[[NSUserDefaults standardUserDefaults] doubleForKey:@"tempFee"];
+        
+        double tonggt = kl*gia+kl*gia*phi/100;
+        if(self.btn_sideOrder.tag==1)
+            tonggt = kl*gia;
+        self.f_tongTien.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:tonggt]]];
+    }
+    @catch (NSException *exception) {
+        NSLog(exception.description);
+    }
+    @finally {
+        
     }
     
-    double kl= [[[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:[[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@""] doubleValue]]]stringByReplacingOccurrencesOfString:@"," withString:@""] doubleValue];
-    double gia=[[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
-    double phi=[[NSUserDefaults standardUserDefaults] doubleForKey:@"tempFee"];
-    
-    double tonggt = kl*gia+kl*gia*phi/100;
-    if(self.btn_sideOrder.tag==1)
-        tonggt = kl*gia;
-    self.f_tongTien.text = [NSString stringWithFormat:@"%@",[utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:tonggt]]];
 }
 
 - (void)registerForKeyboardNotifications
@@ -1093,54 +1310,59 @@
 - (void)textFieldDidBeginEditing:(UITextField *)textField
 {
     activeField = textField;
-    for(UIView *view in self.scroll_keycorrect.subviews)
-        [view removeFromSuperview];
-    if(activeField == self.txt_gia)
-    {
-        if([self.txt_gia.text isEqualToString:@"0"])self.txt_gia.text=@"";
-        int with=0;
-        NSArray *arr = [[NSArray alloc] initWithObjects:@"+0.1",@"+0.5",@"+1",@"+10", @"+50",@"-0.1",@"-0.5",@"-1",@"-10",@"-50",@"Trần",@"Sàn", @"Tham chiếu", nil];
-        for(NSString *stock in arr)
+    @try{
+        for(UIView *view in self.scroll_keycorrect.subviews)
+            [view removeFromSuperview];
+        if(activeField == self.txt_gia)
         {
-            UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-            [label setTitle: stock forState:UIControlStateNormal ] ;
-            label.frame = CGRectMake(43+74*with+2*with, 5, 74, 25);
-            [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
-            label.tag=2;
-            [label setBackgroundColor:[UIColor darkGrayColor]];
-            label.titleLabel.font = [UIFont systemFontOfSize:13];
-            [self.scroll_keycorrect addSubview:label];
-            with +=1;
+            if([self.txt_gia.text isEqualToString:@"0"])self.txt_gia.text=@"";
+            int with=0;
+            NSArray *arr = [[NSArray alloc] initWithObjects:@"+0.1",@"+0.5",@"+1",@"+10", @"+50",@"-0.1",@"-0.5",@"-1",@"-10",@"-50",@"Trần",@"Sàn", @"Tham chiếu", nil];
+            for(NSString *stock in arr)
+            {
+                UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+                [label setTitle: stock forState:UIControlStateNormal ] ;
+                label.frame = CGRectMake(43+74*with+2*with, 5, 74, 25);
+                [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
+                label.tag=2;
+                [label setBackgroundColor:[UIColor darkGrayColor]];
+                label.titleLabel.font = [UIFont systemFontOfSize:13];
+                [self.scroll_keycorrect addSubview:label];
+                with +=1;
+            }
+            [self.scroll_keycorrect setContentSize:CGSizeMake((43+74*with+2*with)+74, self.scroll_keycorrect.frame.size.height)];
+            
         }
-        [self.scroll_keycorrect setContentSize:CGSizeMake((43+74*with+2*with)+74, self.scroll_keycorrect.frame.size.height)];
+        else if(activeField == self.txt_khoiLuong)
+        {
+            int with=0;
+            if([self.txt_khoiLuong.text isEqualToString:@"0"])self.txt_khoiLuong.text=@"";
+            NSArray *arr = [[NSArray alloc] initWithObjects:@"+10",@"+100",@"+500",@"+1,000",@"+10,000",@"+100,000", @"-10",@"-100",@"-500",@"-1,000",@"-10,000",@"-100,000",nil];
+            for(NSString *stock in arr)
+            {
+                UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+                [label setTitle: stock forState:UIControlStateNormal ] ;
+                label.frame = CGRectMake(43+80*with+2*with, 5, 80, 25);
+                [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
+                label.tag=1;
+                [label setBackgroundColor:[UIColor darkGrayColor]];
+                label.titleLabel.font = [UIFont systemFontOfSize:15];
+                [self.scroll_keycorrect addSubview:label];
+                with +=1;
+            }
+            [self.scroll_keycorrect setContentSize:CGSizeMake((43+80*with+2*with)+80, self.scroll_keycorrect.frame.size.height)];
+            [arr release];
+        }
         
-    }
-    else if(activeField == self.txt_khoiLuong)
-    {
-        int with=0;
-        if([self.txt_khoiLuong.text isEqualToString:@"0"])self.txt_khoiLuong.text=@"";
-        NSArray *arr = [[NSArray alloc] initWithObjects:@"+10",@"+100",@"+500",@"+1,000",@"+10,000",@"+100,000", @"-10",@"-100",@"-500",@"-1,000",@"-10,000",@"-100,000",nil];
-        for(NSString *stock in arr)
+        if(activeField == self.txt_tuNgay||activeField == self.txt_denNgay||activeField == self.txt_hieuLuc)
         {
-            UIButton *label = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-            [label setTitle: stock forState:UIControlStateNormal ] ;
-            label.frame = CGRectMake(43+80*with+2*with, 5, 80, 25);
-            [label addTarget:self action:@selector(stock_touchInside:) forControlEvents:UIControlEventTouchUpInside];
-            label.tag=1;
-            [label setBackgroundColor:[UIColor darkGrayColor]];
-            label.titleLabel.font = [UIFont systemFontOfSize:15];
-            [self.scroll_keycorrect addSubview:label];
-            with +=1;
+            [self.scroll_keycorrect setHidden:YES];
         }
-        [self.scroll_keycorrect setContentSize:CGSizeMake((43+80*with+2*with)+80, self.scroll_keycorrect.frame.size.height)];
-        [arr release];
+        else [self.scroll_keycorrect setHidden:NO];
     }
-    
-    if(activeField == self.txt_tuNgay||activeField == self.txt_denNgay||activeField == self.txt_hieuLuc)
-    {
-        [self.scroll_keycorrect setHidden:YES];
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
-    else [self.scroll_keycorrect setHidden:NO];
 }
 - (void)keyboardWillShown:(NSNotification*)aNotification
 {
@@ -1151,7 +1373,17 @@
 
 -(BOOL)checkInput
 {
-    
+    @try{
+        if([self.txt_ma.text isEqualToString:@""])
+        {
+            [utils showMessage:[NSString stringWithFormat:@"Quý khách vui lòng nhập mã chứng khoán"] messageContent:nil];
+            return NO;
+        }
+    if(stockEntity ==nil|| [stockEntity.f_maCK isEqualToString:@""])
+    {
+        [utils showMessage:[NSString stringWithFormat:@"Không tồn tại mã chứng khoán: %@",self.txt_ma.text] messageContent:nil];
+        return NO;
+    }
     NSCharacterSet * set = [[NSCharacterSet characterSetWithCharactersInString:@"0123456789.,"] invertedSet];
     if([self.txt_gia.text rangeOfCharacterFromSet:set].location != NSNotFound)
     {
@@ -1168,14 +1400,21 @@
         }
     }
     
-    return YES;
+        return YES;
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+        return NO;
+    }
 }
 - (IBAction)btn_OrderConfirm:(id)sender {
-    
+    @try{
     if([self checkInput]){
-        NSString *orderType=[[self.f_loaiLenh getOrderType] isEqualToString:@"ATO"]?@"O":
-        [[self.f_loaiLenh getOrderType] isEqualToString:@"ATC"]?@"C":
-        [[self.f_loaiLenh getOrderType] isEqualToString:@"LO"]?@"L":@"M";
+        NSString *orderType= [self.f_loaiLenh getOrderType] ;
+        //NSString *orderType=[[self.f_loaiLenh getOrderType] isEqualToString:@"ATO"]?@"O":
+        //[[self.f_loaiLenh getOrderType] isEqualToString:@"ATC"]?@"C":
+        //[[self.f_loaiLenh getOrderType] isEqualToString:@"LO"]?@"L":
+        //[[self.f_loaiLenh getOrderType] isEqualToString:@"MP"]?@"M":xxx;
         double khoiluong =[[self.txt_khoiLuong.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
         double gia = [[self.txt_gia.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
         double giatri =[[self.f_tongTien.text stringByReplacingOccurrencesOfString:@"," withString:@"" ] doubleValue];
@@ -1188,6 +1427,10 @@
          else [otp resetOtpPosition];*/
         
     }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
 }
 -(void)clearInputData
 {
@@ -1198,6 +1441,7 @@
     [otp resetOtpPosition];
 }
 - (IBAction)btn_showMatchPriceByTime:(id)sender {
+    @try{
     if(array_matchPriceByTime!=nil && array_matchPriceByTime.count>0)
     {
         //if(popover_matchPriceByTime==nil)
@@ -1209,26 +1453,36 @@
         CGRect rect=CGRectMake(((UIButton*)sender).frame.origin.x, ((UIButton*)sender).frame.origin.y+35, 50, 30);
         [popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     }
-}- (IBAction)btn_showOrderMatchPriceByTime:(id)sender {
-    for(VDSCOrderEntity *data in array_order){
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
+}
+- (IBAction)btn_showOrderMatchPriceByTime:(id)sender {
+    @try{
+    for(VDSCOrderEntity *data in [array_order retain]){
         
-        int i = [array_order indexOfObject:data];
+        int i = [[array_order retain] indexOfObject:data];
         NSIndexPath *index = [NSIndexPath indexPathForRow:i inSection:0];
         UITableViewCell *cell =[self.table_todayOderList cellForRowAtIndexPath:index];
         [cell setSelected:NO];
     }
-    UITableViewCell *cell = (UITableViewCell*)[((UIButton*)sender) superview];
-    //[cell setSelected:YES];
-    //if(popover_orderMatchPriceByTime)
+    UITableViewCell *cell = (UITableViewCell*)[[((UIButton*)sender) superview] superview];
+        if([cell isKindOfClass:[UITableView class]])cell =(UITableViewCell*)[((UIButton*)sender) superview];
+    //UIButton *matched = (UIButton*)sender;
     popover_orderMatchPriceByTime = [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"OrderMatchPriceByTime"];
-    VDSCOrderEntity *order = [array_order objectAtIndex:((UIButton*)sender).tag];
+    VDSCOrderEntity *order = [[array_order retain] objectAtIndex:cell.tag];
     popover_orderMatchPriceByTime.orderEntity = order;
-    if(popoverController!=nil){[popoverController release];popoverController = nil;}
+        if(popoverController!=nil){[popoverController dismissPopoverAnimated:YES];[popoverController release];popoverController = nil;}
     popoverController= [[UIPopoverController alloc] initWithContentViewController:popover_orderMatchPriceByTime];
     CGRect rect=CGRectMake(((UIButton*)sender).frame.origin.x+20, ((UIButton*)sender).frame.origin.y+10, 50, 30);
     [popoverController presentPopoverFromRect:rect inView:cell permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
     
-    [((UIButton*)sender) setHighlighted:NO];
+        [((UIButton*)sender) setHighlighted:NO];
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
+    }
     
 }
 - (IBAction)btn_sideOrder_touch:(id)sender {
@@ -1269,7 +1523,6 @@
     [self unregisterForKeyboardNotifications];
     [activeField release];
     [_table_todayOderList release];
-    //[_seg_orderSide release];
     [_f_sucMua release];
     [_f_soDuCK release];
     [_f_tongTien release];

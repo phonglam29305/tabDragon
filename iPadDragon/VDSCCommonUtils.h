@@ -12,20 +12,20 @@
 
 @interface VDSCCommonUtils : NSObject
 
-@property (strong, nonatomic) NSNumberFormatter *numberFormatter;
-@property (strong, nonatomic) NSNumberFormatter *numberFormatter1Digits;
-@property (strong, nonatomic) NSNumberFormatter *numberFormatter2Digits;
-@property (strong, nonatomic) NSNumberFormatter *numberFormatter3Digits;
-@property (strong, nonatomic) NSDateFormatter* shortDateFormater;
-@property (strong, nonatomic) NSDateFormatter* longDateFormater;
-@property (strong, nonatomic) UIColor *c_tran;
-@property (strong, nonatomic) UIColor *c_san;
-@property (strong, nonatomic) UIColor *c_thamChieu;
-@property (strong, nonatomic) UIColor *c_koThayDoi;
-@property (strong, nonatomic) UIColor *c_tang;
-@property (strong, nonatomic) UIColor *c_giam;
+@property (retain, nonatomic) NSNumberFormatter *numberFormatter;
+@property (retain, nonatomic) NSNumberFormatter *numberFormatter1Digits;
+@property (retain, nonatomic) NSNumberFormatter *numberFormatter2Digits;
+@property (retain, nonatomic) NSNumberFormatter *numberFormatter3Digits;
+@property (retain, nonatomic) NSDateFormatter* shortDateFormater;
+@property (retain, nonatomic) NSDateFormatter* longDateFormater;
+@property (retain, nonatomic) UIColor *c_tran;
+@property (retain, nonatomic) UIColor *c_san;
+@property (retain, nonatomic) UIColor *c_thamChieu;
+@property (retain, nonatomic) UIColor *c_koThayDoi;
+@property (retain, nonatomic) UIColor *c_tang;
+@property (retain, nonatomic) UIColor *c_giam;
 
-@property (strong, nonatomic) VDSCClientInfo *clientInfo;
+@property (retain, nonatomic) VDSCClientInfo *clientInfo;
 @property (strong, nonatomic) NSString *soapMessage;
 
 @property (strong, nonatomic) NSString *passExecutePrefix;

@@ -34,6 +34,11 @@
     NSMutableArray *arr_news;
     NSMutableArray *array_matchPriceByTime;
     NSOperationQueue *queue;
+    NSString *matchedPrice;
+    NSString *matchedTime;
+    
+    NSString *currInstrument;
+    NSString *currInstrument_news;
 }
 
 @end
@@ -45,6 +50,7 @@
 @synthesize root_array_price;
 @synthesize stockEntity;
 @synthesize timer_price;
+@synthesize timer_detail;
 
 - (id)initWithFrame:(CGRect)frame
 {
@@ -80,52 +86,75 @@
     root_array_price = [[NSMutableArray alloc] init];
     array_matchPriceByTime= [[NSMutableArray alloc] init];
     array_price = [[NSUserDefaults standardUserDefaults] objectForKey:@"stock_floor"];
-    //[self loadPriceBoard];
-    timer_price = [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(loadPriceBoard) userInfo:nil repeats:YES];
+    //[self loadPriceBoard];[[NSUserDefaults standardUserDefaults] doubleForKey:@"timeChangePriceboard"]
+    double interval = [[NSUserDefaults standardUserDefaults] doubleForKey:@"timeChangePriceboard"];
+    if(interval==0)interval=5;
+    timer_price = [NSTimer scheduledTimerWithTimeInterval:interval target:self selector:@selector(loadPriceBoard) userInfo:nil repeats:YES];
     [timer_price fire];
+    
+    timer_detail = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(loadStockInfo) userInfo:nil repeats:YES];
+    [timer_detail fire];
     [self.char_kl_gia setOpaque:NO];
     loading = NO;
     priceBoard.showsHorizontalScrollIndicator = NO;
     priceBoard.showsVerticalScrollIndicator = NO;
+    matchedPrice=@"";
+    matchedTime=@"";
 }
-
+-(void)loadStockInfo
+{
+    if(currStock!=nil){
+        [self getSelectedStockInfo];
+        [self performSelectorInBackground:@selector(loadNews) withObject:nil];
+        [self loadChart:[currStock.f_ma objectAtIndex:0]];
+    }
+}
 
 -(void) tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
     if(tableView == priceBoard){
-        VDSCPriceBoardEntity *entity = (VDSCPriceBoardEntity*)[array_price objectAtIndex:indexPath.row];
-        currStock=entity;
-        [self getSelectedStockInfo];
-        //[self performSelectorInBackground:@selector(loadChart:) withObject:[entity.f_ma objectAtIndex:0]];
-        [self loadChart:[entity.f_ma objectAtIndex:0]];
-        //[entity release];
+        VDSCPriceBoardEntity *entity = (VDSCPriceBoardEntity*)[[array_price retain ]objectAtIndex:indexPath.row];
+        currStock=[entity retain];
+        [self loadStockInfo];
+        [entity release];
     }
     else if(tableView == self.tableNews)
     {
-        VDSCNewsEntity *news = ((VDSCNewsEntity *)[arr_news objectAtIndex:indexPath.row]);
-        /*
-         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:news.f_title message:news.f_content delegate:self cancelButtonTitle:@"Đóng" otherButtonTitles:Nil, nil];
-         [alert show];
-         [alert release];*/
+        VDSCNewsEntity *news = ((VDSCNewsEntity *)[[arr_news retain] objectAtIndex:indexPath.row]);
         VDSCMainViewController *mainView=(VDSCMainViewController*)((VDSCMarketInfo*)self.delegate).delegate;
         VDSCNewsItemViewController *newController = [mainView.storyboard instantiateViewControllerWithIdentifier:@"VDSCNewsItemView"];
         newController.modalPresentationStyle = UIModalPresentationPageSheet;
         newController.modalTransitionStyle = UIModalTransitionStyleFlipHorizontal;
-        newController.newsEntity = news;
+        newController.newsEntity = [news retain];
         [mainView presentModalViewController:newController animated:YES];
+        [news release];
     }
 }
 
 -(void) loadChart:(NSString*) stockCode
 {
+    if([stockCode isEqualToString:currInstrument])return;
+    currInstrument = stockCode;
     NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
     NSString *strUrl = [NSString stringWithFormat:[user stringForKey:@"chart_matchedPrice"],@"1" , stockCode, @"445", @"212"];
-    NSURL* aURL = [NSURL URLWithString:strUrl];
-    [self.char_kl_gia loadRequest:[NSURLRequest requestWithURL:aURL]];
+    NSURL* aURL = [[NSURL alloc] initWithString:strUrl];
+    //if(![strUrl isEqualToString:matchedPrice])
+    if(self.seq_chartType.selectedSegmentIndex==0)
+    {
+        matchedPrice =strUrl;
+        [self.char_kl_gia loadHTMLString: @"" baseURL: nil];
+        [self.char_kl_gia loadRequest:[NSURLRequest requestWithURL:aURL]];
+    }
+    [aURL release];
     
+    //else{
     strUrl = [NSString stringWithFormat:[user stringForKey:@"chart_matchedPrice"],@"2" , stockCode, @"445", @"212"];
-    aURL = [NSURL URLWithString:strUrl];
+    aURL = [[NSURL alloc] initWithString:strUrl];
+    [self.chart_matchedbyTime loadHTMLString: @"" baseURL: nil];
     [self.chart_matchedbyTime loadRequest:[NSURLRequest requestWithURL:aURL]];
+    [aURL release];
+    //}
+    [[NSURLCache sharedURLCache] removeAllCachedResponses];
 }
 
 -(void) getSelectedStockInfo
@@ -154,163 +183,169 @@
 }
 - (void)requestDone:(ASIFormDataRequest *)request
 {
-    if(request.tag==100)
-    {
-        NSError *err;
-        NSData *data = [[request responseData] retain];
-        NSDictionary *allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:&err] retain];
-        /*if (err)
+    @try{
+        if(request.tag==100)
         {
-            //NSLog([err description]);
-            return;
-        }*/
-        NSArray *arrayOfEntity = [[allDataDictionary objectForKey:@"stock"] retain];
-        
-        stockEntity = [[VDSCPriceBoardEntity alloc] init];
-        stockEntity.f_tenCty = [allDataDictionary objectForKey:@"name"];
-        stockEntity.f_ma = [arrayOfEntity objectAtIndex:0];
-        stockEntity.f_maCK = [stockEntity.f_ma objectAtIndex:0];
-        stockEntity.f_sanGD = [((VDSCMainViewController*)((VDSCMarketInfo*)self.delegate).delegate) getMarketByStock:stockEntity.f_maCK];
-        stockEntity.f_tran = [arrayOfEntity objectAtIndex:2];
-        stockEntity.f_san = [arrayOfEntity objectAtIndex:3];
-        stockEntity.f_thamchieu = [arrayOfEntity objectAtIndex:1];
-        
-        stockEntity.f_mua4_kl = [arrayOfEntity objectAtIndex:4];
-        stockEntity.f_mua3_gia = [arrayOfEntity objectAtIndex:5];
-        stockEntity.f_mua3_kl = [arrayOfEntity objectAtIndex:6];
-        stockEntity.f_mua2_gia = [arrayOfEntity objectAtIndex:7];
-        stockEntity.f_mua2_kl = [arrayOfEntity objectAtIndex:8];
-        stockEntity.f_mua1_gia = [arrayOfEntity objectAtIndex:9];
-        stockEntity.f_mua1_kl = [arrayOfEntity objectAtIndex:10];
-        
-        stockEntity.f_kl_gia = [arrayOfEntity objectAtIndex:11];
-        stockEntity.f_kl_kl = [arrayOfEntity objectAtIndex:12];
-        stockEntity.f_kl_tangGiam = [arrayOfEntity objectAtIndex:13];
-        stockEntity.f_kl_tongkl = [arrayOfEntity objectAtIndex:14];
-        
-        stockEntity.f_ban1_gia = [arrayOfEntity objectAtIndex:15];
-        stockEntity.f_ban1_kl = [arrayOfEntity objectAtIndex:16];
-        stockEntity.f_ban2_gia = [arrayOfEntity objectAtIndex:17];
-        stockEntity.f_ban2_kl = [arrayOfEntity objectAtIndex:18];
-        stockEntity.f_ban3_gia = [arrayOfEntity objectAtIndex:19];
-        stockEntity.f_ban3_kl = [arrayOfEntity objectAtIndex:20];
-        stockEntity.f_ban4_kl = [arrayOfEntity objectAtIndex:21];
-        
-        stockEntity.f_moCua = [arrayOfEntity objectAtIndex:22];
-        stockEntity.f_cao = [arrayOfEntity objectAtIndex:23];
-        stockEntity.f_thap = [arrayOfEntity objectAtIndex:24];
-        stockEntity.f_trungBinh = [arrayOfEntity objectAtIndex:25];
-        stockEntity.f_nuocNgoai_mua = [arrayOfEntity objectAtIndex:26];
-        stockEntity.f_nuocNgoai_ban = [arrayOfEntity objectAtIndex:27];
-        stockEntity.f_room = [arrayOfEntity objectAtIndex:28];
-        
-        [self loadChart:[stockEntity.f_ma objectAtIndex:0]];
-        [self setCellValue:stockEntity];
-        [self performSelectorInBackground:@selector(loadNews) withObject:nil];
-        
-        NSArray *arr = [[allDataDictionary objectForKey:@"pHis"] retain];
-        if(![arr isEqual:[NSNull null]])
-            if([[stockEntity.f_kl_gia objectAtIndex:0]doubleValue]>0)
-            {
-                double giaHT=[[stockEntity.f_kl_gia objectAtIndex:0]doubleValue];
-                double gia1Tuan=[[arr objectAtIndex:0]doubleValue];
-                double gia1Thang=[[arr objectAtIndex:1]doubleValue];
-                double gia3thang=[[arr objectAtIndex:2]doubleValue];
-                double thap52=[[arr objectAtIndex:3]doubleValue];
-                double cao52=[[arr objectAtIndex:4]doubleValue];
-                
-                self.f_cao52Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: cao52]]];
-                self.f_thap52Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: thap52]]];
-                
-                self.f_tangGiam1Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia1Tuan)*100/gia1Tuan]]];
-                self.f_tangGiam1Thang.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia1Thang)*100/gia1Thang]]];
-                self.f_tangGiam3thang.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia3thang)*100/gia3thang]]];
-                self.f_room.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble: [[stockEntity.f_room  objectAtIndex:0] doubleValue]]]];
-                
-                [utils setLabelColor:@"R" label:self.f_room];
-                NSString *color = @"R";
-                if(gia1Tuan< giaHT)
-                    color=@"I";
-                else if(gia1Tuan > giaHT)
-                    color=@"D";
-                [utils setLabelColor:color label:self.f_tangGiam1Tuan];
-                
-                
-                color = @"R";
-                if(gia1Thang < giaHT)
-                    color=@"I";
-                else if(gia1Thang > giaHT)
-                    color=@"D";
-                [utils setLabelColor:color label:self.f_tangGiam1Thang];
-                
-                color = @"R";
-                if(gia3thang< giaHT)
-                    color=@"I";
-                else if(gia3thang > giaHT)
-                    color=@"D";
-                [utils setLabelColor:color label:self.f_tangGiam3thang];
-                
-                color = @"R";
-                if(cao52> giaHT)
-                    color=@"I";
-                else if(cao52 < giaHT)
-                    color=@"D";
-                [utils setLabelColor:color label:self.f_cao52Tuan];
-                
-                color = @"R";
-                if(thap52> giaHT)
-                    color=@"I";
-                else if(thap52 < giaHT)
-                    color=@"D";
-                [utils setLabelColor:color label:self.f_thap52Tuan];
-            }
-        [array_matchPriceByTime removeAllObjects];
-        
-        if(![[allDataDictionary objectForKey:@"timing"] isEqual:[NSNull null]])
-        {
-            NSArray *array = [[allDataDictionary objectForKey:@"timing"] retain];
-            for(int i=array.count-1; i>=0;i--)
-            {
-                
-                [array_matchPriceByTime addObject:[array objectAtIndex:i]];
-            }
-            [array release];
-            [self.table_chiTietKL reloadData];
-         }
-         [arr release];
-        
-        [allDataDictionary release];
-        [data release];
-        [arrayOfEntity release];
-    }
-    else
-    {
-        NSError *err;
-        NSData *data = [[request responseData] retain];
-        NSDictionary *allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:&err] retain];
-        if (err==Nil)
-        {
-            //NSLog([err description]);
-            return;
-        }
-        [arr_news removeAllObjects];
-        NSArray *data_news = [[allDataDictionary objectForKey:@"news"] retain];
-        if([data_news isEqual:[NSNull null]]){return;}
-        for (NSArray *arrayOfEntity in data_news)
-        {
-            VDSCNewsEntity *news = [VDSCNewsEntity alloc];
-            news.f_ID = [arrayOfEntity objectAtIndex:3];
-            news.f_date = [arrayOfEntity objectAtIndex:0];
-            news.f_title = [arrayOfEntity objectAtIndex:1];
-            news.f_content = [arrayOfEntity objectAtIndex:2];
+            NSError *err;
+            NSData *data = [[request responseData] retain];
+            NSDictionary *allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:&err] retain];
+            /*if (err)
+             {
+             //NSLog([err description]);
+             return;
+             }*/
+            NSArray *arrayOfEntity = [[allDataDictionary objectForKey:@"stock"] retain];
             
-            [arr_news addObject:news];
-            [news release];
+            stockEntity = [[VDSCPriceBoardEntity alloc] init];
+            stockEntity.f_tenCty = [allDataDictionary objectForKey:@"name"];
+            stockEntity.f_ma = [arrayOfEntity objectAtIndex:0];
+            stockEntity.f_maCK = [stockEntity.f_ma objectAtIndex:0];
+            stockEntity.f_sanGD = [((VDSCMainViewController*)((VDSCMarketInfo*)self.delegate).delegate) getMarketByStock:stockEntity.f_maCK];
+            stockEntity.f_tran = [arrayOfEntity objectAtIndex:2];
+            stockEntity.f_san = [arrayOfEntity objectAtIndex:3];
+            stockEntity.f_thamchieu = [arrayOfEntity objectAtIndex:1];
+            
+            stockEntity.f_mua4_kl = [arrayOfEntity objectAtIndex:4];
+            stockEntity.f_mua3_gia = [arrayOfEntity objectAtIndex:5];
+            stockEntity.f_mua3_kl = [arrayOfEntity objectAtIndex:6];
+            stockEntity.f_mua2_gia = [arrayOfEntity objectAtIndex:7];
+            stockEntity.f_mua2_kl = [arrayOfEntity objectAtIndex:8];
+            stockEntity.f_mua1_gia = [arrayOfEntity objectAtIndex:9];
+            stockEntity.f_mua1_kl = [arrayOfEntity objectAtIndex:10];
+            
+            stockEntity.f_kl_gia = [arrayOfEntity objectAtIndex:11];
+            stockEntity.f_kl_kl = [arrayOfEntity objectAtIndex:12];
+            stockEntity.f_kl_tangGiam = [arrayOfEntity objectAtIndex:13];
+            stockEntity.f_kl_tongkl = [arrayOfEntity objectAtIndex:14];
+            
+            stockEntity.f_ban1_gia = [arrayOfEntity objectAtIndex:15];
+            stockEntity.f_ban1_kl = [arrayOfEntity objectAtIndex:16];
+            stockEntity.f_ban2_gia = [arrayOfEntity objectAtIndex:17];
+            stockEntity.f_ban2_kl = [arrayOfEntity objectAtIndex:18];
+            stockEntity.f_ban3_gia = [arrayOfEntity objectAtIndex:19];
+            stockEntity.f_ban3_kl = [arrayOfEntity objectAtIndex:20];
+            stockEntity.f_ban4_kl = [arrayOfEntity objectAtIndex:21];
+            
+            stockEntity.f_moCua = [arrayOfEntity objectAtIndex:22];
+            stockEntity.f_cao = [arrayOfEntity objectAtIndex:23];
+            stockEntity.f_thap = [arrayOfEntity objectAtIndex:24];
+            stockEntity.f_trungBinh = [arrayOfEntity objectAtIndex:25];
+            stockEntity.f_nuocNgoai_mua = [arrayOfEntity objectAtIndex:26];
+            stockEntity.f_nuocNgoai_ban = [arrayOfEntity objectAtIndex:27];
+            stockEntity.f_room = [arrayOfEntity objectAtIndex:28];
+            
+            [self loadChart:[stockEntity.f_ma objectAtIndex:0]];
+            [self setCellValue:stockEntity];
+            [self performSelectorInBackground:@selector(loadNews) withObject:nil];
+            
+            NSArray *arr = [[allDataDictionary objectForKey:@"pHis"] retain];
+            if(![arr isEqual:[NSNull null]])
+                if([[stockEntity.f_kl_gia objectAtIndex:0]doubleValue]>0)
+                {
+                    double giaHT=[[stockEntity.f_kl_gia objectAtIndex:0]doubleValue];
+                    double gia1Tuan=[[arr objectAtIndex:0]doubleValue];
+                    double gia1Thang=[[arr objectAtIndex:1]doubleValue];
+                    double gia3thang=[[arr objectAtIndex:2]doubleValue];
+                    double thap52=[[arr objectAtIndex:3]doubleValue];
+                    double cao52=[[arr objectAtIndex:4]doubleValue];
+                    
+                    self.f_cao52Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: cao52]]];
+                    self.f_thap52Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: thap52]]];
+                    
+                    self.f_tangGiam1Tuan.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia1Tuan)*100/gia1Tuan]]];
+                    self.f_tangGiam1Thang.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia1Thang)*100/gia1Thang]]];
+                    self.f_tangGiam3thang.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: (giaHT-gia3thang)*100/gia3thang]]];
+                    self.f_room.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble: [[stockEntity.f_room  objectAtIndex:0] doubleValue]]]];
+                    
+                    [utils setLabelColor:@"R" label:self.f_room];
+                    NSString *color = @"R";
+                    if(gia1Tuan< giaHT)
+                        color=@"I";
+                    else if(gia1Tuan > giaHT)
+                        color=@"D";
+                    [utils setLabelColor:color label:self.f_tangGiam1Tuan];
+                    
+                    
+                    color = @"R";
+                    if(gia1Thang < giaHT)
+                        color=@"I";
+                    else if(gia1Thang > giaHT)
+                        color=@"D";
+                    [utils setLabelColor:color label:self.f_tangGiam1Thang];
+                    
+                    color = @"R";
+                    if(gia3thang< giaHT)
+                        color=@"I";
+                    else if(gia3thang > giaHT)
+                        color=@"D";
+                    [utils setLabelColor:color label:self.f_tangGiam3thang];
+                    
+                    color = @"R";
+                    if(cao52> giaHT)
+                        color=@"I";
+                    else if(cao52 < giaHT)
+                        color=@"D";
+                    [utils setLabelColor:color label:self.f_cao52Tuan];
+                    
+                    color = @"R";
+                    if(thap52> giaHT)
+                        color=@"I";
+                    else if(thap52 < giaHT)
+                        color=@"D";
+                    [utils setLabelColor:color label:self.f_thap52Tuan];
+                }
+            [array_matchPriceByTime removeAllObjects];
+            
+            if(![[allDataDictionary objectForKey:@"timing"] isEqual:[NSNull null]])
+            {
+                NSArray *array = [[allDataDictionary objectForKey:@"timing"] retain];
+                for(int i=array.count-1; i>=0;i--)
+                {
+                    
+                    [array_matchPriceByTime addObject:[array objectAtIndex:i]];
+                }
+                [array release];
+                [self.table_chiTietKL reloadData];
+            }
+            [arr release];
+            
+            [allDataDictionary release];
+            [data release];
+            [arrayOfEntity release];
         }
-        [self.tableNews reloadData];
-        [data_news release];
-        [data release];
-        [allDataDictionary release];
+        else
+        {
+            NSError *err;
+            NSData *data = [request responseData];
+            NSDictionary *allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingAllowFragments error:&err] retain];
+            /*if (err==Nil)
+             {
+             [data release];
+             [allDataDictionary release];
+             return;
+             }*/
+            [arr_news removeAllObjects];
+            //NSArray *data_news = allDataDictionary;//[allDataDictionary objectForKey:@"news"];
+            NSString *url = [NSString stringWithFormat:@"<br/><br/>Xem thêm tại <a href=\"http://data.vdsc.com.vn/vi/Com_News/%@/\" style=\"text-decoration:none;color:\"#0000ff\"><b>Trang Công cụ đầu tư</b></a>", self.f_maCK.text];
+            if(![allDataDictionary isEqual:[NSNull null]]){
+                for (NSDictionary *arrayOfEntity in allDataDictionary)
+                {
+                    VDSCNewsEntity *news = [VDSCNewsEntity alloc];
+                    news.f_ID = [arrayOfEntity objectForKey:@"id"];
+                    news.f_date = [arrayOfEntity objectForKey:@"time"];
+                    news.f_title = [arrayOfEntity objectForKey:@"title"];
+                    news.f_content = [arrayOfEntity objectForKey:@"content"];
+                    news.f_content = [NSString stringWithFormat:@"%@%@", news.f_content, url];
+                    [arr_news addObject:news];
+                    [news release];
+                }
+            }
+            [self.tableNews reloadData];
+            [allDataDictionary release];
+        }
+    }
+    @catch (NSException *ex) {
+        NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 - (void)requestWentWrong:(ASIFormDataRequest *)request
@@ -468,8 +503,11 @@
 }
 -(void) loadNews
 {
-    NSString *url = [NSString stringWithFormat: [[NSUserDefaults standardUserDefaults] stringForKey:@"newsInfo"], [currStock.f_ma objectAtIndex:0]];
-    ASIFormDataRequest *request_cash = [ASIFormDataRequest requestWithURL:[[NSURL alloc] initWithString:url]];
+    if([currStock.f_maCK isEqualToString:currInstrument_news])return;
+    currInstrument_news = currStock.f_maCK;
+    NSString *strUrl = [NSString stringWithFormat: [[NSUserDefaults standardUserDefaults] stringForKey:@"news"], [currStock.f_ma objectAtIndex:0]];
+    NSURL *url = [[[NSURL alloc] initWithString:strUrl] autorelease];
+    ASIFormDataRequest *request_cash = [ASIFormDataRequest requestWithURL:url];
     request_cash.tag=200;
     
     [request_cash setRequestMethod:@"GET"];
@@ -589,7 +627,7 @@
         }
     }
     @catch (NSException *ex) {
-        //NSLog(ex.description);
+        //NSLog(@"Uncaught exception: %@", ex.description);NSLog(@"Stack trace: %@", [ex callStackSymbols]);
     }
 }
 -(void) loadPriceBoard
@@ -598,16 +636,16 @@
     if(self.loadFull && ((VDSCMarketInfo*)self.delegate).root_array_price!=nil && ((VDSCMarketInfo*)self.delegate).root_array_price.count>0)
     {
         /*if(![array_price isEqual:[NSNull null]])
-            [array_price removeAllObjects];
-        if(![root_array_price isEqual:[NSNull null]])
-        [root_array_price removeAllObjects];*/
+         [array_price removeAllObjects];
+         if(![root_array_price isEqual:[NSNull null]])
+         [root_array_price removeAllObjects];*/
         loadFull = NO;
         root_array_price = [((VDSCMarketInfo*)self.delegate).root_array_price retain];
         array_price = [((VDSCMarketInfo*)self.delegate).root_array_price retain];
         [self.priceBoard reloadData];
         if(![array_price isEqual:[NSNull null]] && array_price.count>0)
         {
-            stockEntity = currStock=((VDSCPriceBoardEntity*)[array_price objectAtIndex:0 ]);
+            stockEntity = currStock=[((VDSCPriceBoardEntity*)[array_price objectAtIndex:0 ]) retain];
             [self getSelectedStockInfo];
         }
     }
@@ -662,8 +700,10 @@
                             label_hl.text = label.text;
                             label_hl.textColor = label.textColor;
                             [cell addSubview:label_hl];
-                            [self performSelectorInBackground:@selector(highlightCell:) withObject:label_hl];
+                            //[self performSelectorInBackground:@selector(highlightCell:) withObject:label_hl];
                             //NSLog(maCK_new);
+                            [UIView animateWithDuration:2 animations:^{[label_hl setAlpha:1];
+                                [label_hl setAlpha:0];} completion:^(BOOL finised){[label_hl removeFromSuperview]; [label_hl release]; }];
                         }
                     }
                 }
@@ -704,159 +744,229 @@
 {
     if(tableView == priceBoard)
     {
-        NSString *cellIndentifier = @"VDSCFullCellPrice";
-        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, priceBoard.frame.size.width, 51)];
-        UIView *view_selected = [[UIView alloc] initWithFrame:CGRectMake(0, 0, priceBoard.frame.size.width, 51)];
-        
-        view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"miniPriceboard_cellBG.png"]];
-        view_selected.backgroundColor = [UIColor grayColor];
-        cell.selectedBackgroundView=view_selected;
-        
         VDSCPriceBoardEntity *entity = [((VDSCPriceBoardEntity *)[array_price objectAtIndex:indexPath.row]) retain];
-        
-        UILabel *maCK = [[UILabel alloc] initWithFrame:CGRectMake(10, 10, 80, 25)];
-        maCK.text=[entity.f_ma objectAtIndex:0];
-        [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
-        maCK.font =[UIFont boldSystemFontOfSize:17];
-        maCK.tag=100;
-        
-        if([[entity.f_ma objectAtIndex:1] isEqualToString:@"Z"])
-        {
-            [maCK setBackgroundColor:[UIColor greenColor]];
-            maCK.textColor=[UIColor blueColor];
+        NSString *cellIndentifier = @"VDSCFullCellPrice";
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIndentifier];
+        if(cell==nil){
+            cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier] autorelease];
+            UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, priceBoard.frame.size.width, 51)];
+            UIView *view_selected = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, priceBoard.frame.size.width, 51)] autorelease];
+            
+            view.backgroundColor = [UIColor colorWithPatternImage:[UIImage imageNamed:@"miniPriceboard_cellBG.png"]];
+            view_selected.backgroundColor = [UIColor grayColor];
+            cell.selectedBackgroundView=view_selected;
+            
+            
+            UILabel *maCK = [[UILabel alloc] initWithFrame:CGRectMake(10, 10, 80, 25)];
+            maCK.text=[entity.f_ma objectAtIndex:0];
+            [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
+            maCK.font =[UIFont boldSystemFontOfSize:17];
+            maCK.tag=100;
+            
+            if([[entity.f_ma objectAtIndex:1] isEqualToString:@"Z"])
+            {
+                [maCK setBackgroundColor:[UIColor greenColor]];
+                maCK.textColor=[UIColor blueColor];
+            }
+            else [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
+            
+            [view addSubview:maCK];
+            [maCK release];
+            
+            maCK = [[UILabel alloc] initWithFrame:CGRectMake(100, 0, 50, 25)];
+            maCK.text=[NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: [[entity.f_kl_gia  objectAtIndex:0] doubleValue]]]];
+            maCK.backgroundColor = [UIColor clearColor];
+            maCK.font =[UIFont boldSystemFontOfSize:17];
+            [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
+            maCK.tag=10;
+            [view addSubview:maCK];
+            [maCK release];
+            
+            maCK = [[UILabel alloc] initWithFrame:CGRectMake(160, 0, 80, 25)];
+            maCK.text=[NSString stringWithFormat:@"(%@)" ,[entity.f_kl_tangGiam objectAtIndex:0]];
+            maCK.backgroundColor = [UIColor clearColor];
+            [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
+            maCK.textAlignment = NSTextAlignmentRight;
+            maCK.tag=12;
+            [view addSubview:maCK];
+            [maCK release];
+            
+            double d = [[entity.f_kl_kl objectAtIndex:0] doubleValue]/10;
+            maCK = [[UILabel alloc] initWithFrame:CGRectMake(160, 27, 80, 25)];
+            maCK.text=[NSString stringWithFormat:@"%@" ,[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+            maCK.backgroundColor = [UIColor clearColor];
+            [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
+            maCK.textAlignment = NSTextAlignmentRight;
+            maCK.tag=11;
+            [view addSubview:maCK];
+            [maCK release];
+            
+            maCK = [[UILabel alloc] initWithFrame:CGRectMake(100, 27, 50, 25)];
+            maCK.text=@"KLGD";
+            maCK.backgroundColor = [UIColor clearColor];
+            maCK.font = [UIFont fontWithName:@"Arial" size:13.0f];
+            [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
+            maCK.tag=130;
+            [view addSubview:maCK];
+            [maCK release];
+            
+            
+            [cell addSubview:view];
+            [view release];
         }
-        else [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
-        
-        [view addSubview:maCK];
-        [maCK release];
-        
-        maCK = [[UILabel alloc] initWithFrame:CGRectMake(100, 0, 50, 25)];
-        maCK.text=[NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: [[entity.f_kl_gia  objectAtIndex:0] doubleValue]]]];
-        maCK.backgroundColor = [UIColor clearColor];
-        maCK.font =[UIFont boldSystemFontOfSize:17];
-        [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
-        maCK.tag=10;
-        [view addSubview:maCK];
-        [maCK release];
-        
-        maCK = [[UILabel alloc] initWithFrame:CGRectMake(160, 0, 80, 25)];
-        maCK.text=[NSString stringWithFormat:@"(%@)" ,[entity.f_kl_tangGiam objectAtIndex:0]];
-        maCK.backgroundColor = [UIColor clearColor];
-        [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
-        maCK.textAlignment = NSTextAlignmentRight;
-        maCK.tag=12;
-        [view addSubview:maCK];
-        [maCK release];
-        
-        double d = [[entity.f_kl_kl objectAtIndex:0] doubleValue]/10;
-        maCK = [[UILabel alloc] initWithFrame:CGRectMake(160, 27, 80, 25)];
-        maCK.text=[NSString stringWithFormat:@"%@" ,[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
-        maCK.backgroundColor = [UIColor clearColor];
-        [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
-        maCK.textAlignment = NSTextAlignmentRight;
-        maCK.tag=11;
-        [view addSubview:maCK];
-        [maCK release];
-        
-        maCK = [[UILabel alloc] initWithFrame:CGRectMake(100, 27, 50, 25)];
-        maCK.text=@"KLGD";
-        maCK.backgroundColor = [UIColor clearColor];
-        maCK.font = [UIFont fontWithName:@"Arial" size:13.0f];
-        [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
-        [view addSubview:maCK];
-        [maCK release];
-        
-        //-maCK = [[UILabel alloc] initWithFrame:CGRectMake(view.frame.size.width-5, 0, 5, view.frame.size.height)];
-         //maCK.backgroundColor = [UIColor blackColor];
-         //[view addSubview:maCK];
-         //[maCK release];
-        
-        [cell addSubview:view];
-        [view release];
+        else
+        {
+            UILabel *maCK = (UILabel*)[cell viewWithTag:100];
+            maCK.text=[entity.f_ma objectAtIndex:0];
+            [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
+            
+            if([[entity.f_ma objectAtIndex:1] isEqualToString:@"Z"])
+            {
+                [maCK setBackgroundColor:[UIColor greenColor]];
+                maCK.textColor=[UIColor blueColor];
+            }
+            else
+            {
+                [maCK setBackgroundColor:[UIColor clearColor]];
+                [utils setLabelColor:[entity.f_ma objectAtIndex:1] label:maCK];
+            }
+            
+            maCK = (UILabel*)[cell viewWithTag:10];
+            maCK.text=[NSString stringWithFormat:@"%@",[utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble: [[entity.f_kl_gia  objectAtIndex:0] doubleValue]]]];
+            [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
+            
+            
+            maCK = (UILabel*)[cell viewWithTag:12];
+            maCK.text=[NSString stringWithFormat:@"(%@)" ,[entity.f_kl_tangGiam objectAtIndex:0]];
+            [utils setLabelColor:[entity.f_kl_gia objectAtIndex:1] label:maCK];
+            
+            double d = [[entity.f_kl_kl objectAtIndex:0] doubleValue]/10;
+            maCK = (UILabel*)[cell viewWithTag:11];
+            maCK.text=[NSString stringWithFormat:@"%@" ,[utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+            [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
+            
+            
+            maCK = (UILabel*)[cell viewWithTag:130];
+            maCK.text=@"KLGD";
+            [utils setLabelColor:[entity.f_kl_kl objectAtIndex:1] label:maCK];
+            
+        }
         [entity release];
         return cell;
     }
     else if(tableView == self.table_chiTietKL)
     {
-        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"xxx"];
         NSInteger i=indexPath.row;
         NSArray *dic = [array_matchPriceByTime objectAtIndex:i];
-        
-        //if([nsclass class]){return cell;}
-        int x=0;
-        UILabel *label = [[UILabel alloc] init];
-        label.frame = CGRectMake(x, 0, 98, 24);
-        label.text = [dic objectAtIndex:0];
-        label.backgroundColor = utils.cellBackgroundColor;
-        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-        label.textColor = [UIColor lightGrayColor];
-        [cell addSubview:label];
-        [label release];
-        
-        x=label.frame.origin.x+1+label.frame.size.width;
-        label = [[UILabel alloc] init];
-        label.frame = CGRectMake(x, 0, 81, 24);
-        double d=[[dic objectAtIndex:1] doubleValue];
-        label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
-        label.backgroundColor = utils.cellBackgroundColor;
-        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-        label.textAlignment = UITextAlignmentRight;
-        label.textColor = [UIColor lightGrayColor];
-        [cell addSubview:label];
-        [label release];
-        
-        x=label.frame.origin.x+1+label.frame.size.width;
-        label = [[UILabel alloc] init];
-        label.frame = CGRectMake(x, 0, 107, 24);
-        d=[[dic objectAtIndex:2] doubleValue];
-        label.text = [NSString stringWithFormat:@"%@", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
-        label.backgroundColor = utils.cellBackgroundColor;
-        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-        label.textAlignment = UITextAlignmentRight;
-        label.textColor = [UIColor lightGrayColor];
-        [cell addSubview:label];
-        [label release];
-        
-        x=label.frame.origin.x+1+label.frame.size.width;
-        label = [[UILabel alloc] init];
-        label.frame = CGRectMake(x, 0, 156, 24);
-        d=[[dic objectAtIndex:3] doubleValue];
-        label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
-        label.backgroundColor = utils.cellBackgroundColor;
-        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-        label.textColor = [UIColor lightGrayColor];
-        label.textAlignment = UITextAlignmentRight;
-        [cell addSubview:label];
-        
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"xxx"];
+        if(cell ==nil){
+            cell =[[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"xxx"] autorelease];
+            
+            //if([nsclass class]){return cell;}
+            int x=0;
+            UILabel *label = [[UILabel alloc] init];
+            label.frame = CGRectMake(x, 0, 98, 24);
+            label.text = [dic objectAtIndex:0];
+            label.backgroundColor = utils.cellBackgroundColor;
+            label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+            label.textColor = [UIColor lightGrayColor];
+            label.tag=10;
+            [cell addSubview:label];
+            [label release];
+            
+            x=label.frame.origin.x+1+label.frame.size.width;
+            label = [[UILabel alloc] init];
+            label.frame = CGRectMake(x, 0, 81, 24);
+            double d=[[dic objectAtIndex:1] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+            label.backgroundColor = utils.cellBackgroundColor;
+            label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+            label.textAlignment = UITextAlignmentRight;
+            label.textColor = [UIColor lightGrayColor];
+            label.tag=11;
+            [cell addSubview:label];
+            [label release];
+            
+            x=label.frame.origin.x+1+label.frame.size.width;
+            label = [[UILabel alloc] init];
+            label.frame = CGRectMake(x, 0, 107, 24);
+            d=[[dic objectAtIndex:2] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+            label.backgroundColor = utils.cellBackgroundColor;
+            label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+            label.textAlignment = UITextAlignmentRight;
+            label.textColor = [UIColor lightGrayColor];
+            label.tag=12;
+            [cell addSubview:label];
+            [label release];
+            
+            x=label.frame.origin.x+1+label.frame.size.width;
+            label = [[UILabel alloc] init];
+            label.frame = CGRectMake(x, 0, 156, 24);
+            d=[[dic objectAtIndex:3] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+            label.backgroundColor = utils.cellBackgroundColor;
+            label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+            label.textColor = [UIColor lightGrayColor];
+            label.textAlignment = UITextAlignmentRight;
+            label.tag=13;
+            [cell addSubview:label];
+            [label release];
+        }
+        else
+        {
+            UILabel *label = (UILabel*)[cell viewWithTag:10];
+            label.text = [dic objectAtIndex:0];
+            
+            label = (UILabel*)[cell viewWithTag:11];
+            double d=[[dic objectAtIndex:1] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter1Digits stringFromNumber:[NSNumber numberWithDouble:d]]];
+            
+            label = (UILabel*)[cell viewWithTag:12];
+            d=[[dic objectAtIndex:2] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+            label = (UILabel*)[cell viewWithTag:13];
+            d=[[dic objectAtIndex:3] doubleValue];
+            label.text = [NSString stringWithFormat:@"%@  ", [utils.numberFormatter stringFromNumber:[NSNumber numberWithDouble:d]]];
+        }
         return cell;
     }
     else
     {
         NSString *cellIndentifier = @"VDSCFullCellPrice";
-        UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-        UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableNews.frame.size.width, 30)];
-        view.backgroundColor = [UIColor darkGrayColor];
-        
-        UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, self.tableNews.frame.size.width-80, 25)];
-        title.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_title;
-        
-        [title setFont:[UIFont fontWithName:@"Arial" size:14]];
-        title.textColor = [UIColor lightGrayColor];
-        title.backgroundColor = [UIColor clearColor];
-        [view addSubview:title];
-        
-        UILabel *date = [[UILabel alloc] initWithFrame:CGRectMake(380, 10, 80, 25)];
-        date.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_date;
-        [date setFont:[UIFont fontWithName:@"Arial" size:11]];
-        date.textColor = [UIColor yellowColor];
-        date.backgroundColor = [UIColor clearColor];
-        [view addSubview:date];
-        
-        [cell addSubview:view];
-        [view release];
-        [date release];
-        [title release];
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIndentifier];
+        if(cell==nil){
+            cell=[[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier] autorelease];
+            UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.tableNews.frame.size.width, 30)];
+            view.backgroundColor = [UIColor darkGrayColor];
+            
+            UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, self.tableNews.frame.size.width-80, 25)];
+            title.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_title;        [title setFont:[UIFont fontWithName:@"Arial" size:14]];
+            title.textColor = [UIColor lightGrayColor];
+            title.backgroundColor = [UIColor clearColor];
+            title.tag=10;
+            [view addSubview:title];
+            
+            UILabel *date = [[UILabel alloc] initWithFrame:CGRectMake(380, 10, 80, 25)];
+            date.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_date;
+            [date setFont:[UIFont fontWithName:@"Arial" size:11]];
+            date.textColor = [UIColor yellowColor];
+            date.backgroundColor = [UIColor clearColor];
+            date.tag=11;
+            [view addSubview:date];
+            
+            [cell addSubview:view];
+            [view release];
+            [date release];
+            [title release];
+        }
+        else{
+            UILabel *title = (UILabel*)[cell viewWithTag:10];
+            title.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_title;
+            
+            UILabel *date = (UILabel*)[cell viewWithTag:11];
+            date.text=((VDSCNewsEntity*)[arr_news objectAtIndex:indexPath.row]).f_date;
+        }
         return cell;
     }
 }
@@ -907,6 +1017,7 @@
     [_chart_matchedbyTime release];
     [_table_chiTietKL release];
     [_view_chiTietKL release];
+    [_seq_chartType release];
     [super dealloc];
 }
 - (IBAction)showFullPriceBoard:(id)sender {

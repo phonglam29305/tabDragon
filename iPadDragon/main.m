@@ -12,7 +12,18 @@
 
 int main(int argc, char *argv[])
 {
-    @autoreleasepool {
+    /*@autoreleasepool {
         return UIApplicationMain(argc, argv, nil, NSStringFromClass([VDSCAppDelegate class]));
+    }*/
+    int retVal = -1;
+    @autoreleasepool {
+        @try {
+            retVal = UIApplicationMain(argc, argv, nil, NSStringFromClass([VDSCAppDelegate class]));
+        }
+        @catch (NSException* exception) {
+            NSLog(@"Uncaught exception: %@", exception.description);
+            NSLog(@"Stack trace: %@", [exception callStackSymbols]);
+        }
     }
+    return retVal;
 }

@@ -31,4 +31,5 @@
 @property (strong, nonatomic) id delegate;
 @property (retain, nonatomic) IBOutlet UILabel *f_tongCong_text;
 
+@property (strong, nonatomic) NSTimer *timer;
 @end

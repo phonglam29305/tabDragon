@@ -15,5 +15,6 @@
 @property (strong, nonatomic) NSString *f_title;
 @property (strong, nonatomic) NSString *f_content;
 
+@property (assign, nonatomic) BOOL *isWebLink;
 
 @end

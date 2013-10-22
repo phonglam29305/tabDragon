@@ -9,10 +9,10 @@
 #import "VDSCIndexEntity.h"
 
 @implementation VDSCIndexEntity
--(VDSCIndexEntity*)init
+-(VDSCIndexEntity*)initWithDefault:(NSString*)marketName
 {
     VDSCIndexEntity *entity = [VDSCIndexEntity alloc];
-    entity.marketName=@"";
+    entity.marketName=marketName;
     entity.mark=@"0";
     entity.value = @"0";
     entity.changePer = @"0";

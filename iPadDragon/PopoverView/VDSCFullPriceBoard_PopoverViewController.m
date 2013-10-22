@@ -11,17 +11,18 @@
 #import "VDSCMainViewController.h"
 #import "VDSCStock4OrderEntity.h"
 #import "VDSCPriceBoardEntity.h"
+#import "VDSCFullCellPrice.h"
 
 @interface VDSCFullPriceBoard_PopoverViewController ()
 {
     VDSCCommonUtils *utils;
-    VDSCPriceBoardEntity *stockEntity;
+    //VDSCPriceBoardEntity *stockEntity;
     NSTimer *timer;
 }
 @end
 
 @implementation VDSCFullPriceBoard_PopoverViewController
-@synthesize priceEntity;
+@synthesize stockEntity;
 
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
@@ -40,18 +41,15 @@
     //stockEntity = [priceEntity copy];
     //[self assignDataToControl];
     
-    timer  = [NSTimer scheduledTimerWithTimeInterval:5 target:self selector:@selector(loadStockInfo) userInfo:nil repeats:YES];
+    timer  = [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(loadStockInfo) userInfo:nil repeats:YES];
     [timer fire];
 }
-
+-(void) loadChart{
+    if(stockEntity !=nil)
+    [self loadChart:stockEntity.f_maCK];
+}
 -(void)assignDataToControl
 {
-    if(stockEntity == nil)
-    {
-        stockEntity = priceEntity;
-        [self loadChart:stockEntity.f_maCK];
-    }
-    //{
     stockEntity.f_sanGD = [((VDSCMainViewController*)self.delegate) getMarketByStock:stockEntity.f_maCK];
     self.f_ma.text= [NSString stringWithFormat:@"%@",[stockEntity.f_ma objectAtIndex:0]];
     self.f_kl_gia.text= [NSString stringWithFormat:@"%@",[utils.numberFormatter2Digits stringFromNumber:[NSNumber numberWithDouble: [[stockEntity.f_kl_gia  objectAtIndex:0] doubleValue]]]];
@@ -87,7 +85,7 @@
     [utils setLabelColor:[stockEntity.f_kl_tongkl objectAtIndex:1] label:self.f_tongKL];
     
     
-    VDSCStock4OrderEntity *stock = [utils loadStockInfo:stockEntity.f_maCK marketId:stockEntity.f_sanGD orderSide:@"S"];
+    VDSCStock4OrderEntity *stock = [[utils loadStockInfo:stockEntity.f_maCK marketId:stockEntity.f_sanGD orderSide:@"S"] retain];
     self.f_congTy.text = stock.name;
     [stock release];
     //}
@@ -150,17 +148,21 @@
         strUrl = [NSString stringWithFormat:[user stringForKey:@"chart_matchedPrice"], @"2", stockCode, @"500", @"285"];
     }
     NSURL* aURL = [NSURL URLWithString:strUrl];
-    [self.chart_kl_gia loadRequest:[NSURLRequest requestWithURL:aURL]];
+    NSURLRequest *request = [NSURLRequest requestWithURL:aURL];
+    [self.chart_kl_gia loadRequest:request];
     [self.chart_kl_gia setAlpha:1];
+    [[NSURLCache sharedURLCache] removeAllCachedResponses];
+    
 }
 - (IBAction)btn_buy_touch:(id)sender {
     
-    VDSCMainViewController *mainView = (VDSCMainViewController*)self.delegate;
+    VDSCMainViewController *mainView = (VDSCMainViewController*)self.marketInfo.delegate;
     mainView.stockId =stockEntity.f_maCK;
     mainView.priceOrder = [[stockEntity.f_ban1_gia objectAtIndex:0] doubleValue];
     mainView.orderSide=@"B";
     [mainView showOrderView:self.currentCell orderEntity:nil inView:self.marketInfo.priceBoard];
     [self.marketInfo.popover dismissPopoverAnimated:YES];
+    [((VDSCFullCellPrice*)self.currentCell).popover dismissPopoverAnimated:YES];
 }
 
 - (IBAction)btn_sell_touch:(id)sender {
@@ -171,6 +173,7 @@
     mainView.priceOrder = [[stockEntity.f_mua1_gia objectAtIndex:0] doubleValue];
     [mainView showOrderView:self.currentCell orderEntity:nil inView:self.marketInfo.priceBoard];
     [self.marketInfo.popover dismissPopoverAnimated:YES];
+    [((VDSCFullCellPrice*)self.currentCell).popover dismissPopoverAnimated:YES];
 }
 
 - (IBAction)btn_add_touch:(id)sender {
@@ -212,6 +215,7 @@
     [_f_trungBinh release];
     [_chart_kl_gia release];
     [utils release];
+    
     [super dealloc];
 }
 - (void)viewDidUnload {
@@ -227,5 +231,6 @@
 {
     [timer invalidate];
     timer = nil;
+   
 }
 @end

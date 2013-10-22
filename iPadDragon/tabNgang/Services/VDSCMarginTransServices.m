@@ -39,9 +39,11 @@
     NSTimer *timer;
     double tienCoTheGiam ;
     NSOperationQueue *queue;
+    VDSCPush2DateListViewController *popover_push2DateList;
 }
 
 @synthesize loaiGD1_listLoaiGD2_TKUQ3;
+@synthesize popoverController;
 
 - (id)initWithFrame:(CGRect)frame
 {
@@ -151,7 +153,7 @@
 -(void)loadData{
     if(loading==nil)
     {
-        loading = [utils showLoading:self];
+        loading = [[utils showLoading:self] retain];
         [self LoadMarginInfo];
         [self loadMarginHistory];
     }
@@ -248,9 +250,15 @@
 
 - (IBAction)btn_LoaiGiaoDich:(id)sender {
     loaiGD1_listLoaiGD2_TKUQ3=2;
-    VDSCPush2DateListViewController *popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
-    popover_push2DateList.delegate=self;
-    self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
+    if(popover_push2DateList==nil)
+    {
+        popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
+        popover_push2DateList.delegate=self;
+    }
+    
+    [popover_push2DateList loadData];
+    //if(popoverController == nil)
+        popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
     CGRect rect=((UIButton*)sender).frame;
     //rect.origin.x = ((UIButton*)sender).frame.origin.x;
     [self.popoverController presentPopoverFromRect:rect inView:((UIButton*)sender).superview permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
@@ -413,6 +421,7 @@
                         else
                             message = @"";
                     }
+                    [arr release];
                 }
             }
         }
@@ -511,10 +520,14 @@
 
 - (IBAction)btn_TKUyQuyenNhanChuyenKhoanSucMua_touch:(id)sender {
     loaiGD1_listLoaiGD2_TKUQ3=3;
-    VDSCPush2DateListViewController *popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
-    popover_push2DateList.delegate=self;
+    if(popover_push2DateList==nil){
+        popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
+        popover_push2DateList.delegate=self;
+    }
     popover_push2DateList.array_TKUQ = array_TKUQ;
-    self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
+    [popover_push2DateList loadData];
+    //if(popoverController==nil)
+        popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
     CGRect rect=((UIButton*)sender).frame;
     [self.popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
 }
@@ -638,11 +651,17 @@
 
 - (IBAction)btn_loaiGD_touch:(id)sender {
     loaiGD1_listLoaiGD2_TKUQ3=1;
-    VDSCPush2DateListViewController *popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
-    popover_push2DateList.delegate=self;
-    self.popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
+    if(popover_push2DateList==nil){
+        popover_push2DateList =  [[self.superview.window.rootViewController storyboard] instantiateViewControllerWithIdentifier:@"Push2DateList"];
+        popover_push2DateList.delegate=self;
+    }
+    
+    [popover_push2DateList loadData];
+    //if(self.popoverController==nil)
+        popoverController = [[UIPopoverController alloc] initWithContentViewController:popover_push2DateList];
     CGRect rect=((UIButton*)sender).frame;
-    [self.popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    [popoverController presentPopoverFromRect:rect inView:self permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    //[popover_push2DateList release];
 }
 -(void)LoadMarginInfo
 {
@@ -690,7 +709,7 @@
                         , @"KW_MARGIN_AUTHORIZED_CLIENTID", self.btn_TKUyQuyen.titleLabel.text
                         , nil];
         NSString *post = [utils postValueBuilder:arr];
-        NSDictionary *data = [utils getDataFromUrl:url method:@"POST" postData:post];
+        NSDictionary *data = [[utils getDataFromUrl:url method:@"POST" postData:post] retain];
         if(![data isEqual:[NSNull null]])
         {
             if([[data objectForKey:@"success"] boolValue])
@@ -699,13 +718,15 @@
                 self.f_tienDcGhiNo.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:d]];
             }
         }
+        [arr release];
+        [data release];
     }
 }
 
 - (IBAction)btn_refresh_touch:(id)sender {
     if(loading==nil && [self checkDate])
     {
-        loading = [utils showLoading:self.table_list];
+        loading = [[utils showLoading:self.table_list] retain];
         [self loadMarginHistory];
     }
 }
@@ -849,108 +870,137 @@
 }
 -(UITableViewCell*) tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    NSString *cellIndentifier = @"VDSCFullCellPrice";
-    UITableViewCell *cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier];
-    UIView *bg_view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, cell.frame.size.height)];
-    bg_view.backgroundColor= [UIColor darkGrayColor];
-    cell.backgroundView = bg_view;
-    //}
     NSInteger i=indexPath.row;
     NSArray *item = [array objectAtIndex:i];
     UIColor *color = [UIColor lightGrayColor];
-    
-    int x=0;
-    UILabel *label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 106, utils.rowHeight-1);
-    label.text = [item objectAtIndex:0];
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentCenter;
-    label.tag=10;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 224, utils.rowHeight-1);
-    label.text = [item objectAtIndex:1];
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentCenter;
-    label.tag=11;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 127, utils.rowHeight-1);
-    
-    if([[item objectAtIndex:1] isEqual:@"Chuyển sức mua"])
-        label.text = [[item objectAtIndex:2] substringToIndex:7];
-    else
-        label.text = [item objectAtIndex:2];
-    
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentCenter;
-    [label setAdjustsFontSizeToFitWidth:YES];
-    label.tag=11;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 120, utils.rowHeight-1);
-    label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: [[item objectAtIndex:3] doubleValue]]];
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentRight;
-    label.tag=11;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 97, utils.rowHeight-1);
-    label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:[[item objectAtIndex:4] doubleValue]]];
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentRight;
-    label.tag=11;
-    [cell addSubview:label];
-    [label release];
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    label = [[UILabel alloc] init];
-    label.frame = CGRectMake(x, 0, 119, utils.rowHeight-1);
-    label.text = [item objectAtIndex:5];
-    label.backgroundColor = utils.cellBackgroundColor;
-    label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    label.textColor = color;
-    label.textAlignment = UITextAlignmentCenter;
-    label.tag=11;
-    [cell addSubview:label];
-    [label release];
-    
-    
-    x=label.frame.origin.x+label.frame.size.width+1;
-    UITextView *textField = [[UITextView alloc] init];
-    textField.frame = CGRectMake(x, 0, 181, utils.rowHeight-1);
-    textField.text = [item objectAtIndex:9];
-    textField.backgroundColor = utils.cellBackgroundColor;
-    textField.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
-    textField.textColor = color;
-    textField.textAlignment = UITextAlignmentLeft;
-    textField.tag=11;
-    [textField setEditable:NO];
-    [cell addSubview:textField];
-    [textField release];
-    
+    NSString *cellIndentifier = @"VDSCFullCellPrice";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIndentifier];
+    if(cell==nil)
+    {
+        cell =[[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIndentifier] autorelease];
+        
+        UIView *bg_view = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, cell.frame.size.height)] autorelease];
+        bg_view.backgroundColor= [UIColor darkGrayColor];
+        cell.backgroundView = bg_view;
+        //}
+        
+        int x=0;
+        UILabel *label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 106, utils.rowHeight-1);
+        label.text = [item objectAtIndex:0];
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentCenter;
+        label.tag=10;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 224, utils.rowHeight-1);
+        label.text = [item objectAtIndex:1];
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentCenter;
+        label.tag=11;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 127, utils.rowHeight-1);
+        
+        if([[item objectAtIndex:1] isEqual:@"Chuyển sức mua"])
+            label.text = [[item objectAtIndex:2] substringToIndex:7];
+        else
+            label.text = [item objectAtIndex:2];
+        
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentCenter;
+        [label setAdjustsFontSizeToFitWidth:YES];
+        label.tag=12;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 120, utils.rowHeight-1);
+        label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: [[item objectAtIndex:3] doubleValue]]];
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentRight;
+        label.tag=13;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 97, utils.rowHeight-1);
+        label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:[[item objectAtIndex:4] doubleValue]]];
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentRight;
+        label.tag=14;
+        [cell addSubview:label];
+        [label release];
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        label = [[UILabel alloc] init];
+        label.frame = CGRectMake(x, 0, 119, utils.rowHeight-1);
+        label.text = [item objectAtIndex:5];
+        label.backgroundColor = utils.cellBackgroundColor;
+        label.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        label.textColor = color;
+        label.textAlignment = UITextAlignmentCenter;
+        label.tag=15;
+        [cell addSubview:label];
+        [label release];
+        
+        
+        x=label.frame.origin.x+label.frame.size.width+1;
+        UITextView *textField = [[UITextView alloc] init];
+        textField.frame = CGRectMake(x, 0, 181, utils.rowHeight-1);
+        textField.text = [item objectAtIndex:9];
+        textField.backgroundColor = utils.cellBackgroundColor;
+        textField.font = [UIFont fontWithName:utils.fontFamily size:utils.fontSize];
+        textField.textColor = color;
+        textField.textAlignment = UITextAlignmentLeft;
+        textField.tag=16;
+        [textField setEditable:NO];
+        [cell addSubview:textField];
+        [textField release];
+    }
+    else{
+        UILabel *label = (UILabel*) [cell viewWithTag:10];
+        label.text = [item objectAtIndex:0];
+        
+        label = (UILabel*) [cell viewWithTag:11];
+        label.text = [item objectAtIndex:1];
+        
+        label = (UILabel*) [cell viewWithTag:12];
+        if([[item objectAtIndex:1] isEqual:@"Chuyển sức mua"])
+            label.text = [[item objectAtIndex:2] substringToIndex:7];
+        else
+            label.text = [item objectAtIndex:2];
+        
+        label = (UILabel*) [cell viewWithTag:13];
+        label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble: [[item objectAtIndex:3] doubleValue]]];
+        
+        label = (UILabel*) [cell viewWithTag:14];
+        label.text = [utils.numberFormatter3Digits stringFromNumber:[NSNumber numberWithDouble:[[item objectAtIndex:4] doubleValue]]];
+        
+        label = (UILabel*) [cell viewWithTag:15];
+        label.text = [item objectAtIndex:5];
+        
+        UITextField *textField = (UITextField*) [cell viewWithTag:16];
+        textField.text = [item objectAtIndex:9];
+    }
     
     return cell;
 }

@@ -20,4 +20,6 @@
 @property (retain, nonatomic) id delegate;
 
 - (BOOL)sendOrder:(NSString*)orderType stockEntity:(VDSCPriceBoardEntity*)stockEntity params:(VDSCSystemParams*)params orderSide:(NSString*)orderSide price:(double)price qty:(double)qty amountWithFee:(double)amountWithFee isGtdOrder:(BOOL)isGtdOrder gtdDate:(NSString*)gtdDate otpView:(VDSCOTPView*)otpView;
+
+-(NSString*)checkOrderMarket:(NSString*)orderType marketId:(NSString*)marketId stockCode:(NSString*)stockCode orderSide:(NSString*)orderSide;
 @end

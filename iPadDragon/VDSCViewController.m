@@ -10,6 +10,9 @@
 #import "VDSCMainViewController.h"
 #import "VDSCCommonUtils.h"
 #import "ASIFormDataRequest.h"
+#import "VDSCNewsEntity.h"
+#import "VDSCNewsItemViewController.h"
+#import "VDSCSystemParams.h"
 
 
 @implementation VDSCViewController
@@ -18,6 +21,7 @@
     VDSCMainViewController *main;
     NSOperationQueue *queue;
     UIWebView *loading;
+    VDSCSystemParams *params;
 }
 
 @synthesize loginButton=_loginButton;
@@ -41,40 +45,28 @@
     }
     return self;
 }
-
-- (void)viewDidLoad
-{
-    
-    [[NSUserDefaults standardUserDefaults] setValue:@"Dữ liệu được cập nhật 10s 1 lần." forKey:@"infoView"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    self.fieldMatKhau.delegate=self;
-    self.fieldMaTK.delegate=self;
-    
-    //[self.view setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"splashscreen.jpg"]]];
-    //[self.loginView setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"loginBackground"]]];
-    
-    [self.view bringSubviewToFront:viewBackground];
-    [self registerForKeyboardNotifications];
-    self.fieldMatKhau.secureTextEntry=YES;
-    utils = [[VDSCCommonUtils alloc] init];
-    [self setLanguage];
-    
-    [[self viewBackground] setHidden:NO];
-    [self performSelectorInBackground:@selector(showLoginView) withObject:nil];
-    //[self showLoginView];
-    
+- (void)resetDefaults {
+    NSUserDefaults * defs = [NSUserDefaults standardUserDefaults];
+    NSDictionary * dict = [defs dictionaryRepresentation];
+    for (id key in dict) {
+        [defs removeObjectForKey:key];
+    }
+    [defs synchronize];
     NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
-    //NSString *onlineServer = @"http://192.168.2.29/idragon";
+    //NSString *onlineServer = @"http://192.168.2.29/iDragonV3_IPAD";
+    //NSString *onlineServer = @"http://192.168.2.18/iDragonV3_HOSE";
     NSString *onlineServer = @"https://idragon.vdsc.com.vn";
     NSString *priceBoardServer = @"http://price2.vdsc.com.vn/ipad";
+    //NSString *priceBoardServer = @"http://172.16.1.19/ipad";
     //priceboard
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/stockInfo.jsp?code=%@"] forKey:@"stock_info"];
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/dataInfo.jsp?code=%@&matchedIdx=-1&counter=0"] forKey:@"stock_fullInfo"];
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/marketInfo.jsp"] forKey:@"market_info"];
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/boardInfo.jsp?id=%@&langId=vi_VN&sectorId=%d"] forKey:@"root_priceBoard"];
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/updateInfo.jsp?boardId=%@&clientVersion=%ld"] forKey:@"change_priceBoard"];
-    [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/chartInfo.jsp?type=%@&code=%@&width=%@&height=%@&s1=KL&s2=Giá"] forKey:@"chart_matchedPrice"];
+    [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/chartInfo.jsp?type=%@&code=%@&width=%@&height=%@&s1=KL&s2=Price"] forKey:@"chart_matchedPrice"];
     [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/newsInfo.jsp?code=%@"] forKey:@"newsInfo"];
+    [user setObject:[NSString stringWithFormat:@"%@%@",priceBoardServer,@"/news.jsp?code=%@"] forKey:@"news"];
     
     
     //stock
@@ -161,6 +153,32 @@
      */
     
     [user synchronize];
+}
+
+- (void)viewDidLoad
+{
+    [self resetDefaults];
+    
+    [[NSUserDefaults standardUserDefaults] setValue:@"Dữ liệu được cập nhật 10s 1 lần." forKey:@"infoView"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    self.fieldMatKhau.delegate=self;
+    self.fieldMaTK.delegate=self;
+    
+    //[self.view setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"splashscreen.jpg"]]];
+    //[self.loginView setBackgroundColor:[UIColor colorWithPatternImage:[UIImage imageNamed:@"loginBackground"]]];
+    
+    [self.view bringSubviewToFront:viewBackground];
+    [self registerForKeyboardNotifications];
+    self.fieldMatKhau.secureTextEntry=YES;
+    utils = [[VDSCCommonUtils alloc] init];
+    params = [[VDSCSystemParams alloc] init];
+    [self setLanguage];
+    
+    [[self viewBackground] setHidden:NO];
+    [self performSelectorInBackground:@selector(showLoginView) withObject:nil];
+    //[self showLoginView];
+    
+    
     
     [super viewDidLoad];
     
@@ -206,8 +224,9 @@
     [self.loginView setHidden:YES];
 }
 - (IBAction)btnLogin:(id)sender {
+    [self resetDefaults];
     if(loading==nil){
-        loading = [utils showLoading:self.loginView];
+        //loading = [[utils showLoading:self.loginView] retain];
         [self.fieldMatKhau resignFirstResponder];
         [self.fieldMaTK resignFirstResponder];
         if(self.fieldMaTK.text.length==0){
@@ -220,13 +239,16 @@
             return;
         }
         NSString *post = [NSString stringWithFormat:@"KW_WS_EXECPWD:::%@@@@KW_CLIENTID:::%@@@@KW_CLIENTPWD:::%@",[NSString stringWithFormat:@"Abc123XYZ2013_%@", [utils.shortDateFormater stringFromDate: [NSDate date]]],[self.fieldMaTK.text substringFromIndex:3],self.fieldMatKhau.text];
+        //NSString *post = [NSString stringWithFormat:@"KW_WS_EXECPWD:::%@@@@KW_CLIENTID:::%@@@@KW_CLIENTPWD:::%@",@"Abc123XYZ2013_04/07/2013",[self.fieldMaTK.text substringFromIndex:3],self.fieldMatKhau.text];
         NSString *urlStr = [[NSUserDefaults standardUserDefaults] stringForKey:@"login"];
-        NSURL *url = [NSURL URLWithString:urlStr];
+        NSURL *url = [[NSURL alloc] initWithString: urlStr];
         ASIFormDataRequest *request_cash = [ASIFormDataRequest requestWithURL:url ];
         request_cash.tag=100;
+        //request_cash.timeOutSeconds = 30;
         [request_cash addPostValue:post forKey:@"info"];
         [request_cash setRequestMethod:@"POST"];
         [self grabURLInTheBackground:request_cash];
+        [url release];
     }
 }
 
@@ -274,13 +296,13 @@
 {
     NSDictionary *allDataDictionary;
     @try{
-        NSData *data = [request responseData];
+        NSData *data = [[request responseData] retain];
         allDataDictionary = [[NSJSONSerialization JSONObjectWithData:data options:0 error:nil] retain];
         if(request.tag==100)
         {
             [[NSUserDefaults standardUserDefaults] setValue:@""  forKey:@"clientID"];
             [[NSUserDefaults standardUserDefaults] synchronize];
-            if([[allDataDictionary objectForKey:@"success"] boolValue])
+            if(![allDataDictionary isEqual:[NSNull null]]&&[[allDataDictionary objectForKey:@"success"] boolValue])
             {
                 NSUserDefaults *user = [NSUserDefaults standardUserDefaults];
                 [user setObject:[allDataDictionary objectForKey:@"name"] forKey:@"clientName"];
@@ -293,19 +315,27 @@
                 [user synchronize];
                 [self hideLoginView];
                 [utils init];
-                [self performSelectorInBackground:@selector(loadClientInfo) withObject:nil];
+                //[self performSelectorInBackground:@selector(loadClientInfo) withObject:nil];
+                [self loadClientInfo];
                 self.fieldMaTK.text=@"033C";
                 self.fieldMatKhau.text=@"";
             }
             else
             {
+                if([allDataDictionary isEqual:[NSNull null]])
+                {
+                    [utils showMessage:@"Không thể kết nối được với hệ thống! Quý khách vui lòng kiểm tra lại kết nối internet hoặc liên hệ với VDSC để được hỗ trợ thêm." messageContent:nil];
+                }
+                else
                 [self loginFail:[allDataDictionary objectForKey:@"errCode"]];
                 //return;
             }
         }
+        [data release];
+        //[request clearDelegatesAndCancel];
     }
     @catch (NSException *exception) {
-        NSLog(exception.description);
+        NSLog(@"%@",exception.description);
     }
     @finally {
         if(allDataDictionary!=nil)
@@ -321,8 +351,9 @@
 
 - (void)requestWentWrong:(ASIFormDataRequest *)request
 {
+    [utils showMessage:@"Không thể kết nối được với hệ thống! Quý khách vui lòng kiểm tra lại kết nối internet hoặc liên hệ với VDSC để được hỗ trợ thêm." messageContent:nil];
     NSError *error = [request error];
-    NSLog(error.description);
+    NSLog(@"%@",error.description);
     if(loading!=nil){
         [loading removeFromSuperview];
         [loading release];
@@ -342,7 +373,43 @@
     [self.fieldMaTK resignFirstResponder];
 }
 
+- (IBAction)btn_dieuKhoan_touch:(id)sender {
+    VDSCNewsEntity *news = [[VDSCNewsEntity alloc] init];
+    news.f_title=@"Điều khoản sử dụng";
+    news.f_content = params.ternLink;
+    news.isWebLink=YES;
+    VDSCNewsItemViewController *newController = [self.storyboard instantiateViewControllerWithIdentifier:@"VDSCNewsItemView"];
+    newController.modalPresentationStyle = UIModalPresentationFullScreen;
+    newController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    newController.newsEntity = news;
+    [self presentModalViewController:newController animated:YES];
+    [news release];
+}
+
+- (IBAction)btn_hoTro_touch:(id)sender {
+    VDSCNewsEntity *news = [[VDSCNewsEntity alloc] init];
+    news.f_title=@"Hỗ trợ";
+    news.f_content = params.supportLink;
+    news.isWebLink=YES;
+    VDSCNewsItemViewController *newController = [self.storyboard instantiateViewControllerWithIdentifier:@"VDSCNewsItemView"];
+    newController.modalPresentationStyle = UIModalPresentationFullScreen;
+    newController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    newController.newsEntity = news;
+    [self presentModalViewController:newController animated:YES];
+    [news release];
+}
+
 - (IBAction)btn_huongDan_touch:(id)sender {
+    VDSCNewsEntity *news = [[VDSCNewsEntity alloc] init];
+    news.f_title=@"Hướng dẫn sử dụng";
+    news.f_content = params.instructionLink;
+    news.isWebLink=YES;
+    VDSCNewsItemViewController *newController = [self.storyboard instantiateViewControllerWithIdentifier:@"VDSCNewsItemView"];
+    newController.modalPresentationStyle = UIModalPresentationFullScreen;
+    newController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+    newController.newsEntity = news;
+    [self presentModalViewController:newController animated:YES];
+    [news release];
     
 }
 -(void)loginFail:(NSString *)errorCode
